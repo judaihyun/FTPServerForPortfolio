@@ -23,3 +23,11 @@ void err_display(const char* msg) {
 	printf("[%s] %s", msg, (char*)lpMsgBuf);
 	LocalFree(lpMsgBuf);
 }
+
+
+int ftpLog(const char* msg, int level) {
+	if (LOG_INFO >= level) {
+		printf("[LOG] %d: %s\n", level, msg);
+	}
+	return 0;
+}

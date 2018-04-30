@@ -22,7 +22,6 @@ private:
 	SOCKADDR_IN serveraddr;
 	string path{ "" };
 	WaitClients clients;
-	WaitClients dataChannel;
 	bool setOrNot = false;
 
 };

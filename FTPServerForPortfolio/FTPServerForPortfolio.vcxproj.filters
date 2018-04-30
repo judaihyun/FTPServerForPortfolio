@@ -27,6 +27,9 @@
     <ClInclude Include="WaitClient.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="Utils.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -35,10 +38,16 @@
     <ClCompile Include="FTPserver.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="WinsockError.cpp">
+    <ClCompile Include="WaitClient.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="WaitClient.cpp">
+    <ClCompile Include="controlThread.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="ErrorControl.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
