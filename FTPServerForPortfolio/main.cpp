@@ -10,8 +10,8 @@ int main(){
 
 
 	FTPServer s;
-	s.SetUploadFilePath("f:/DUMMY");
-	s.Start();
+	s.SetFilePath("f:/DUMMY");
+	s.Starter();
 
 	/*
 	WaitClients a;

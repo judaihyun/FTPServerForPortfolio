@@ -11,7 +11,8 @@
 #include <experimental\filesystem>
 #include <filesystem>
 #include <process.h>
-
+#include <Ws2def.h>
+#include <Wsrm.h>
 
 #include "ErrorControl.h"
 

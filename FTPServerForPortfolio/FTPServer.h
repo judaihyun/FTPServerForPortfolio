@@ -8,14 +8,13 @@
 class FTPServer {
 public:
 	~FTPServer() { WSACleanup(); };
-	FTPServer();
-	void Start();
-	
-	void SetUploadFilePath(string p) {
-		clients.setPath(p);
+	inline FTPServer() {if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) exit(1);	}
+
+	void Starter();
+
+	void SetFilePath(string p) {
 		setOrNot = true;
 	};
-	
 private:
 	WSADATA wsa;
 	SOCKET listen_sock = INVALID_SOCKET;

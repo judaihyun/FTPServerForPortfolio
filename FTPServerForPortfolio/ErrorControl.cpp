@@ -26,8 +26,14 @@ void err_display(const char* msg) {
 
 
 int ftpLog(const char* msg, int level) {
-	if (LOG_INFO >= level) {
-		printf("[LOG] %d: %s\n", level, msg);
-	}
+
+	switch (level) {
+		case LOG_INFO:
+			printf("[LOG] %d: %s\n", level, msg);
+			break;
+		case LOG_ERROR:
+			printf("[LOG] %d: %s\n", level, msg);
+			break;
+		}
 	return 0;
 }

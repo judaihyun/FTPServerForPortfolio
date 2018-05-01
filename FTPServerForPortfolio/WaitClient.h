@@ -1,6 +1,5 @@
 #pragma once
 #include "WinSockHeader.h"
-#include "Utils.h"
 #include <cctype>
 #define BUFSIZE 512
 
@@ -9,33 +8,25 @@ struct passToThread {
 	string path;
 };
 
-
-//unsigned WINAPI DataChannel(void*);
-unsigned WINAPI ControlChannel(void*);
-void ResponseController(char *, char*, string);
-
-
-
+unsigned WINAPI controlHandler(void*);
 
 class WaitClients {
 public:
 
-	~WaitClients() { closesocket(client_sock); };
-
-
-	void Accepting(SOCKET&);
-	void GetFiles();
-	string GetPath() { return argList.path; };
+	~WaitClients() { closesocket(controlSock); };
+	void accepting(SOCKET&);
+	//void dataAccept();
+	void getFiles();
+	string getPath() { return path; };
 	void setPath(string p) { argList.path = p; };
 private:
-	SOCKET client_sock = INVALID_SOCKET;
+	SOCKET controlSock = INVALID_SOCKET;
 	SOCKADDR_IN clientaddr;
-	int addrlen;
+	int addrlen{ 0 };
 
 	HANDLE fThread1; 
-	HANDLE fThread2;
-
 	passToThread argList;
+
 	string path; // f:/DUMMY
 	queue<ifstream*> ifs;
 	queue<ofstream*> ofs;
@@ -46,3 +37,38 @@ private:
 };
 
 
+
+class ControlHandler {
+public:
+	ControlHandler(void* arg) :argList{ *((passToThread*)arg) } {
+		path = argList.path;
+		controlSock = (SOCKET)argList.sock;
+	}
+	~ControlHandler() {
+		closesocket(controlSock);
+		closesocket(dataSock);
+		closesocket(clientDataSock);
+	}
+
+	string createDataSock();
+	string getPath() { return path; }
+	int controlActivate();
+	int sendMsg(const string);
+	int sendList();
+	int commandsHandler();
+private:
+	passToThread argList;
+	string path{ "" };
+	string CRLF = "\r\n";
+
+	char commands[40]{ '\0', };
+	char resBuf[BUFSIZE + 1]{ "220 FTP Test Serivce. \r\n" };
+
+	SOCKET controlSock = INVALID_SOCKET;
+	SOCKET dataSock = INVALID_SOCKET;
+	SOCKET clientDataSock = INVALID_SOCKET;
+
+	SOCKADDR_IN controlClient_addr;
+	SOCKADDR_IN dataClient_addr;
+	SOCKADDR_IN dataServer_addr;
+};

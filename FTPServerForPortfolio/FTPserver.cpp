@@ -1,12 +1,8 @@
 #include "FTPServer.h"
 
 
-FTPServer::FTPServer() {
-	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) exit(1);
 
-}
-
-void FTPServer::Start() {
+void FTPServer::Starter() {
 	if (setOrNot == false) {
 		cerr << "path not set \n";
 		return;
@@ -36,8 +32,12 @@ void FTPServer::Start() {
 	if (listen(listen_sock, SOMAXCONN) == SOCKET_ERROR) {
 		err_quit("listen()");
 	}
+	cout << "===================================\n";
+	printf("[controlChannel-server]  : IP=%s, Port=%d\n",
+		inet_ntoa(serveraddr.sin_addr), ntohs(serveraddr.sin_port));
 
-	clients.Accepting(listen_sock);
+	clients.setPath(path);
+	clients.accepting(listen_sock);
 
 }
 
