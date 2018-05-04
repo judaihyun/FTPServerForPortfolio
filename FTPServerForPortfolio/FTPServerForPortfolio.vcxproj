@@ -89,6 +89,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -144,16 +146,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="ControlHandler.h" />
     <ClInclude Include="ErrorControl.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
     </ClInclude>
-    <ClInclude Include="FTPServer.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="WaitClient.h" />
     <ClInclude Include="WinSockHeader.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="FTPserver.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="controlThread.cpp" />
     <ClCompile Include="Utils.cpp" />

@@ -1,16 +1,48 @@
 #include "WaitClient.h"
+#include "Utils.h"
 
-unsigned WINAPI controlHandler(void *arg)
+
+
+void WaitClients::Starter()
 {
-	ControlHandler t = new ControlHandler(arg);
-	t.controlActivate();
-	return 0;
-}
+	int retval{ 0 };
+	if (setOrNot == false) {
+		cerr << "FTPServer() path not set \n";
+		return;
+	}
 
+	//socket
+	listenSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (listenSock == INVALID_SOCKET) err_quit("socket()");
+
+	bool optval = true;
+	retval = setsockopt(listenSock, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(optval));
+	if (retval == SOCKET_ERROR) err_quit("setsockopt()");
+
+
+	ZeroMemory(&controlAddr, sizeof(controlAddr));
+	controlAddr.sin_family = AF_INET;
+	controlAddr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
+	//if(inet_pton(AF_INET,"127.0.0.1",(&controlAddr.sin_addr.S_un.S_addr)) < 1) err_quit("bind() - inet_pton");
+	controlAddr.sin_port = htons(SERVERPORT);
+
+	//bind
+	retval = bind(listenSock, (SOCKADDR*)&controlAddr, sizeof(controlAddr));
+	if (retval == SOCKET_ERROR) err_quit("bind()");
+
+	//listen socket
+	if (listen(listenSock, SOMAXCONN) == SOCKET_ERROR) {
+		err_quit("listen()");
+	}
+	cout << "===================================\n";
+	printf("[controlChannel-server]  : IP=%s, Port=%d\n",
+		inet_ntoa(controlAddr.sin_addr), ntohs(controlAddr.sin_port));
+
+	accepting(listenSock);
+}
 
 void WaitClients::accepting(SOCKET &listen_sock) {
 
-	//GetFiles();
 
 	while (1) {
 		addrlen = sizeof(clientaddr);
@@ -20,7 +52,7 @@ void WaitClients::accepting(SOCKET &listen_sock) {
 			break;
 		}
 
-		argList.sock = (void*)controlSock;
+		argList.sock = (void*)controlSock; //with root path
 		
 		printf("[controlChannel-client] : IP=%s, Port=%d\n",
 			inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
@@ -35,20 +67,3 @@ void WaitClients::accepting(SOCKET &listen_sock) {
 }
 
 
-
-void WaitClients::getFiles() {
-	for (auto& p : fs::recursive_directory_iterator(path)) {
-
-		if (p.status().type() == fs::file_type::directory) {
-			fs::create_directories(p.path().string().replace(0, 1, "e"));
-		}
-		else if (p.status().type() != fs::file_type::directory) {
-			cout << "path : " << p.path() << ", size : " << file_size(p) << " byte" << endl;
-			fileNames.push_back(p.path().string());
-		}
-		else {
-			cout << "unknown type!" << endl;
-			return;
-		}
-	}
-}

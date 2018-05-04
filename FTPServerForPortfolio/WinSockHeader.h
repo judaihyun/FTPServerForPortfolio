@@ -5,6 +5,7 @@
 #include <WS2tcpip.h>
 #include <Windows.h>
 #include <iostream>
+#include <vector>
 #include <string>
 #include <fstream>
 #include <queue>
@@ -15,7 +16,13 @@
 #include <Wsrm.h>
 
 #include "ErrorControl.h"
-
-
 using namespace std;
 namespace fs = std::experimental::filesystem;
+
+
+struct passToThread {
+	void* sock;
+	string rootPath;
+};
+
+
