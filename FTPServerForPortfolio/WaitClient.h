@@ -3,15 +3,19 @@
 #include "ControlHandler.h"
 #include <cctype>
 #define SERVERPORT 210
+#define LISTENPORT 200
 
 
 class WaitClients {
 public:
 
-	~WaitClients() { closesocket(controlSock); WSACleanup(); };
+	~WaitClients() {
+		cout << "server ¼Ò¸êµÊ.\n";
+		closesocket(controlSock); WSACleanup(); 
+	};
 	WaitClients(string r) {
-		argList.rootPath = r;
 		if (!r.empty()) {
+			argList.rootPath = r;
 			setOrNot = true;
 		}
 		if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) exit(1);
@@ -32,12 +36,5 @@ private:
 	HANDLE fThread1; 
 	passToThread argList;
 
-	string rootPath{ "" }; // f:/DUMMY
-	queue<ifstream*> ifs;
-	queue<ofstream*> ofs;
-	queue<ifstream*> ifs2;
-	queue<ofstream*> ofs2;
-	vector<string> fileNames;
-	
 };
 
