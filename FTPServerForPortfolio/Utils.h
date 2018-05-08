@@ -2,4 +2,6 @@
 #include "WinSockHeader.h"
 #include <sstream>
 
-void ReplaceString(std::string & strCallId, const char * pszBefore, const char * pszAfter);
+void replaceString(std::string & strCallId, const char * pszBefore, const char * pszAfter);
+
+void replacePORT(std::string & source, std::string & ip, int & port);

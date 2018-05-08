@@ -35,7 +35,7 @@ void WaitClients::Starter()
 		err_quit("listen()");
 	}
 	ftpLog(LOG_INFO,"==================================================");
-	ftpLog(LOG_INFO,"[control@Channel-server]  : IP=%s, Port=%d\n", 
+	ftpLog(LOG_INFO,"[Server-ControlChannel] : IP=%s, Port=%d", 
 		inet_ntoa(controlAddr.sin_addr), ntohs(controlAddr.sin_port));
 
 
@@ -54,9 +54,9 @@ void WaitClients::accepting(SOCKET &listen_sock) {
 		}
 
 		argList.sock = (void*)controlSock; //with root path
-		ftpLog(LOG_INFO,"[accepted-control] : IP=%s, Port=%d\n",
+		ftpLog(LOG_INFO,"[Server-Accept] From...  IP=%s, Port=%d",
 			inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
-		ftpLog(LOG_INFO,"=====================================");
+		ftpLog(LOG_INFO,"==================================================");
 
 		fThread1 = (HANDLE)_beginthreadex(NULL, 0, controlHandler, (void*)&argList, 0, NULL);
 		if (fThread1 == NULL) { closesocket(controlSock); }

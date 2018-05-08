@@ -3,7 +3,7 @@
 
 
 
-void ReplaceString(std::string & strCallId, const char * pszBefore, const char * pszAfter)
+void replaceString(std::string & strCallId, const char * pszBefore, const char * pszAfter)
 {
 	size_t iPos = strCallId.find(pszBefore);
 	size_t iBeforeLen = strlen(pszBefore);
@@ -13,6 +13,28 @@ void ReplaceString(std::string & strCallId, const char * pszBefore, const char *
 		strCallId.replace(iPos, iBeforeLen, pszAfter);
 		iPos = strCallId.find(pszBefore, iPos);
 	}
+}
+
+void replacePORT(std::string & source, std::string & ip, int & port) {
+	replaceString(source, ",", ".");
+	string temp;
+	int high = 0;
+	int low = 0;
+	int pos = 0;
+	int i;
+	for (i = 0; pos < 4; ++i) {
+		if (source[i] == '.') {
+			pos++;
+		}
+	}
+	ip.assign(source, 0, i - 1);
+	temp.assign(source, i, source.size());
+   
+	low = stoi(temp.substr(temp.find(".") + 1, temp.size()));
+	high = stoi(temp.substr(0, temp.find(".")));
+
+	port = (high * 256) + low;
+
 }
 
 void printPerms(fs::perms p)

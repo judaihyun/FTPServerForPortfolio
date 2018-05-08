@@ -2,8 +2,8 @@
 #include "WinSockHeader.h"
 #include "ControlHandler.h"
 #include <cctype>
-#define SERVERPORT 210
-#define LISTENPORT 200
+#define SERVERPORT 210  //control channel
+
 
 
 class WaitClients {
@@ -11,9 +11,11 @@ public:
 
 	~WaitClients() {
 		cout << "server ¼Ò¸êµÊ.\n";
+		ftpLog(LOG_DEBUG, "WaitClients Destructed");
 		closesocket(controlSock); WSACleanup(); 
 	};
 	WaitClients(string r) {
+
 		if (!r.empty()) {
 			argList.rootPath = r;
 			setOrNot = true;
@@ -35,6 +37,5 @@ private:
 	bool setOrNot = false;
 	HANDLE fThread1; 
 	passToThread argList;
-
 };
 
