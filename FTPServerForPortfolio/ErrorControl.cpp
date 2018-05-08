@@ -34,20 +34,10 @@ void ftpLog(int level, const char* format, ...) {
 
 	
 	//int level= va_arg(ap,int);
-	switch (level) {
-	case LOG_INFO:
-		vsprintf_s(buf, 512, format, ap);
-		va_end(ap);
-		cout << "info : " << buf << endl;
-		delete[] buf;
-		break;
-	case LOG_ERROR:
 		vsprintf_s(buf, 512, format, ap);
 		va_end(ap);
 		cout << "err : " << buf << endl;
 		delete[] buf;
-		break;
-	}
 	
 
 //#endif

@@ -3,7 +3,7 @@
 
 #define COM_BUFSIZE 1024
 #define SEND_BUFSIZE 1460
-#define DIR_BUFSIZE 10000
+#define DIR_BUFSIZE 10000000
 
 
 unsigned WINAPI controlHandler(void*);
@@ -34,6 +34,8 @@ public:
 	int controlActivate();
 	int sendMsg(const string);
 	void sendFile();
+	void setRetrSize(unsigned long int r) { sizeRETR = r; };
+	unsigned long int getRetrSize() { return sizeRETR; };
 	void sendList();
 	int commandsHandler();
 private:
@@ -43,6 +45,7 @@ private:
 	string SP{ " " }; //space
 	string CRLF{ "\r\n" };
 	string fileName{ "" };
+	unsigned long int sizeRETR{ 0 };
 
 	char *dirList;
 	char commands[40]{ '\0' };

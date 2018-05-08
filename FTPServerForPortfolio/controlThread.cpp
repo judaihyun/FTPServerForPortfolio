@@ -107,7 +107,7 @@ int ControlHandler::commandsHandler() {
 		sendList();
 
 		sendMsg("226 Successfully transferred " + getCurPath() + "\"" + CRLF);
-		ftpLog(LOG_DEBUG,"command - LIST - getCur is empty");
+		//ftpLog(LOG_DEBUG,"command - LIST - getCur is empty");
 	}
 	else if (argv[0] == "CDUP") {
 		string cdup = getCurPath();
@@ -146,8 +146,7 @@ int ControlHandler::commandsHandler() {
 		ftpLog(LOG_DEBUG, "250 CWD Commands successful.");
 
 	}
-	else if (argv[0] == "RETR") {
-	//else if (!strcmp(argv[0], "RETR")) {   // file(s) are transffered from server to client.  RETR <FILENAME>
+	else if (argv[0] == "RETR") { // file(s) are transffered from server to client.  RETR <FILENAME>
 		ftpLog(LOG_DEBUG, "RETR argc : %d", argv.size());
 	
 		ftpLog(LOG_DEBUG, "parsed file name [%s]", argv[1].c_str());
@@ -157,10 +156,15 @@ int ControlHandler::commandsHandler() {
 		ftpLog(LOG_DEBUG,"125 Successfully transferred.");
 
 		sendFile();
-		sendMsg("226 Transfer complete." + CRLF);
-		ftpLog(LOG_DEBUG,"226 Transfer complete.");
+	
 	}
-
+	else if (argv[0] == "REST") {
+		ftpLog(LOG_DEBUG, "REST argv : %d", argv.size());
+		ftpLog(LOG_DEBUG, "REST startSize : %s", argv[1].c_str());
+		setRetrSize(stoi(argv[1]));
+		cout << "size : " << getRetrSize() << endl;
+		sendMsg("350 Restarting at " + argv[1] + CRLF);
+	}
 
 	else {
 		ftpLog(LOG_ERROR, "%s : command not defined", argv[0].c_str());
@@ -205,13 +209,19 @@ void ControlHandler::sendFile() {
 	}
 		
 	closesocket(clientDataSock);
-
 	ifs->close();
+	sendMsg("226 Transfer complete." + CRLF);
+	ftpLog(LOG_DEBUG, "226 Transfer complete.");
 }
 
 
 
 int ControlHandler::openFile() {
+	int startPos{ 0 };
+	if (getRetrSize() > 0) {
+		startPos = getRetrSize() ;
+	}
+
 	int fileSize{ 0 };
 	string targetFile = getRootPath();
 	targetFile += getCurPath(); // space 처리 잘해야함. space 두개 세개일수도 있음.
@@ -224,10 +234,10 @@ int ControlHandler::openFile() {
 		err_quit("file open failed");
 	};
 	//cout << "content : " << ifs->rdbuf();
-	ifs->seekg(0, ios::end);
+	ifs->seekg(startPos, ios::end);
 	fileSize = (int)ifs->tellg();
 	//cout << "file size : " << fileSize << endl;
-	ifs->seekg(0, ios::beg);
+	ifs->seekg(startPos, ios::beg);
 	return fileSize;
 }
 
@@ -276,12 +286,13 @@ int ControlHandler::getFileList() {   // for LIST command
 	dirList = new char[DIR_BUFSIZE] {""};
 	char *tempList = new char[DIR_BUFSIZE];
 
-//	cout << "getFileList() targetPath : [" << targetPath << "]" << endl;
+	ftpLog(LOG_INFO, "getFileList() targetPath : [%s]", targetPath.c_str());
 
 	ostringstream os;
 	// 550 access is denied  처리해야함
 	// 전부(system volume information)까지 보이므로.. 안보이게 처리해야함.
 
+	try {
 		for (auto& p : fs::directory_iterator(targetPath)) {
 			auto ftime = fs::last_write_time(p);
 			time_t cftime = decltype(ftime)::clock::to_time_t(ftime);
@@ -297,8 +308,11 @@ int ControlHandler::getFileList() {   // for LIST command
 			else {
 				cout << "unknown file type" << endl;
 			}
-
 		}
+	}
+	catch (const std::exception& e) {
+		ftpLog(LOG_FETAL, e.what());
+	}
 
 	string temp = os.str();
 	strcpy_s(dirList, DIR_BUFSIZE, temp.c_str());
