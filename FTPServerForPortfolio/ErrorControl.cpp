@@ -24,31 +24,46 @@ void err_display(const char* msg) {
 	LocalFree(lpMsgBuf);
 }
 
-
-void ftpLog(int level, const char* format, ...) {
+void ftpLog(logLevel level, const char* format, ...) {
 //#ifdef _DEBUG_MODE_
 	char *buf = new char[512];
-
+	
 	va_list ap;
-	va_start(ap, format);
-
 	
-	//int level= va_arg(ap,int);
-	switch (level) {
-	case LOG_INFO:
-		vsprintf_s(buf, 512, format, ap);
-		va_end(ap);
-		cout << "info : " << buf << endl;
-		delete[] buf;
-		break;
-	case LOG_ERROR:
-		vsprintf_s(buf, 512, format, ap);
-		va_end(ap);
-		cout << "err : " << buf << endl;
-		delete[] buf;
-		break;
+	logLevel lev = LOG_TRACE;
+
+	//if (lev <= level && level < LOG_TRACE) {
+	if (lev >= level) {
+		switch (level) {
+		case LOG_TRACE: {   // 6
+			va_start(ap, format);
+			vsprintf_s(buf, 512, format, ap);
+			cout << setw(7) << "TRACE [" << setw(3) << LOG_NUMBER++ << setw(3) << "] " << buf << endl;
+			break;
+		}
+		case LOG_DEBUG: {   // 5
+			va_start(ap, format);
+			vsprintf_s(buf, 512, format, ap);
+			cout << setw(7) << "DEBUG [" << setw(3) << LOG_NUMBER++ << setw(3) << "] " << buf << endl;
+			break;
+		}
+		case LOG_INFO: {  // 4
+			va_start(ap, format);
+			vsprintf_s(buf, 512, format, ap);
+			cout << setw(7) << "INFO [" << setw(3) << LOG_NUMBER++ << setw(3) << "] " << buf << endl;
+			break;
+		}
+		case LOG_WARN: {  // 3
+			va_start(ap, format);
+			vsprintf_s(buf, 512, format, ap);
+			cout << setw(7) << "WARN [" << setw(3) << LOG_NUMBER++ << setw(3) << "] " << buf << endl;
+			break;
+		}
+
+		}
 	}
-	
-
+	va_end(ap);
 //#endif
 }
+
+

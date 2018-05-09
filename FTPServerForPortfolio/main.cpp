@@ -1,7 +1,6 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #pragma comment(lib,"ws2_32")
-#include "WaitClient.h"
-
+#include "FtpServer.h"
 
 int main(){
 
@@ -10,7 +9,7 @@ int main(){
 	start = clock();
 	*/
 
-	WaitClients s{ "f:" };  // set root directory.
+	FtpServer s{ "f:" };  // set root directory.
 	s.Starter();
 
 

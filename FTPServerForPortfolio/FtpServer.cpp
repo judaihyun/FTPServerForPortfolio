@@ -1,9 +1,9 @@
-#include "WaitClient.h"
+#include "FtpServer.h"
 #include "Utils.h"
 
 static int accepted{ 0 };
 
-void WaitClients::Starter()
+void FtpServer::Starter()
 {
 	int retval{ 0 };
 	if (setOrNot == false) {
@@ -19,10 +19,14 @@ void WaitClients::Starter()
 	retval = setsockopt(listenSock, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(optval));
 	if (retval == SOCKET_ERROR) err_quit("setsockopt()");
 
+	bool bEnable = true;
+	retval = setsockopt(listenSock, SOL_SOCKET, SO_KEEPALIVE, (char*)&bEnable, sizeof(bEnable));
+	if (retval == SOCKET_ERROR) err_quit("setsockopt()");
+
 
 	ZeroMemory(&controlAddr, sizeof(controlAddr));
 	controlAddr.sin_family = AF_INET;
-	controlAddr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
+	controlAddr.sin_addr.S_un.S_addr = INADDR_ANY;
 	//if(inet_pton(AF_INET,"127.0.0.1",(&controlAddr.sin_addr.S_un.S_addr)) < 1) err_quit("bind() - inet_pton");
 	controlAddr.sin_port = htons(SERVERPORT);
 
@@ -35,14 +39,14 @@ void WaitClients::Starter()
 		err_quit("listen()");
 	}
 	ftpLog(LOG_INFO,"==================================================");
-	ftpLog(LOG_INFO,"[control@Channel-server]  : IP=%s, Port=%d\n", 
+	ftpLog(LOG_INFO,"[Server-ControlChannel] : IP=%s, Port=%d", 
 		inet_ntoa(controlAddr.sin_addr), ntohs(controlAddr.sin_port));
 
 
 	accepting(listenSock);
 }
 
-void WaitClients::accepting(SOCKET &listen_sock) {
+void FtpServer::accepting(SOCKET &listen_sock) {
 
 
 	while (1) {
@@ -54,9 +58,9 @@ void WaitClients::accepting(SOCKET &listen_sock) {
 		}
 
 		argList.sock = (void*)controlSock; //with root path
-		ftpLog(LOG_INFO,"[accepted-control] : IP=%s, Port=%d\n",
+		ftpLog(LOG_INFO,"[Server-Accept] From...  IP=%s, Port=%d",
 			inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
-		ftpLog(LOG_INFO,"=====================================");
+		ftpLog(LOG_INFO,"==================================================");
 
 		fThread1 = (HANDLE)_beginthreadex(NULL, 0, controlHandler, (void*)&argList, 0, NULL);
 		if (fThread1 == NULL) { closesocket(controlSock); }

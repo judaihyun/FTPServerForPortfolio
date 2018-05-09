@@ -2,18 +2,19 @@
 #include "WinSockHeader.h"
 #include "ControlHandler.h"
 #include <cctype>
-#define SERVERPORT 210
-#define LISTENPORT 200
+#define SERVERPORT 210  //control channel
 
 
-class WaitClients {
+
+class FtpServer {
 public:
 
-	~WaitClients() {
-		cout << "server ¼Ò¸êµÊ.\n";
+	~FtpServer() {
+		ftpLog(LOG_DEBUG, "WaitClients Destructed");
 		closesocket(controlSock); WSACleanup(); 
 	};
-	WaitClients(string r) {
+	FtpServer(string r) {
+
 		if (!r.empty()) {
 			argList.rootPath = r;
 			setOrNot = true;
@@ -32,9 +33,9 @@ private:
 	SOCKADDR_IN controlAddr;
 	int addrlen{ 0 };
 
+
 	bool setOrNot = false;
 	HANDLE fThread1; 
 	passToThread argList;
-
 };
 
