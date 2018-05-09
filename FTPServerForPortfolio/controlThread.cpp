@@ -206,6 +206,7 @@ void ControlHandler::sendFile() {
 		
 	closesocket(clientDataSock);
 
+
 	ifs->close();
 }
 
