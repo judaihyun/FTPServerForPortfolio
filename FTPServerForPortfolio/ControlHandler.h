@@ -1,10 +1,12 @@
 #pragma once
 #include "WinSockHeader.h"
+#include "FtpServer.h"
 
-#define COM_BUFSIZE 1024
-#define SEND_BUFSIZE 1460
+#define COM_BUFSIZE 1024  // for command
+#define RES_BUFSIZE 1024  // for response
 #define DIR_BUFSIZE 10000000
-#define ACTIVEPORT 200
+
+
 
 unsigned WINAPI controlHandler(void*);
 
@@ -14,7 +16,7 @@ public:
 		controlSock = (SOCKET)argList.sock;
 	}
 	~ControlHandler() {
-		cout << "ControlHandler ¼Ò¸êµÊ \n";
+		ftpLog(LOG_INFO, "ControlHandler ¼Ò¸êµÊ");
 		closesocket(controlSock);
 		closesocket(dataListenSock);
 		closesocket(clientDataSock);
@@ -48,8 +50,8 @@ private:
 	bool isActive = false;
 
 	char *dirList;
-	char commands[40]{ '\0' };
-	char resBuf[COM_BUFSIZE + 1]{ "220 FTP Test Serivce. \r\n" };
+	char commands[COM_BUFSIZE]{ '\0' };
+	char resBuf[RES_BUFSIZE + 1]{ "220 FTP Test Serivce. \r\n" };
 
 	SOCKET controlSock = INVALID_SOCKET;
 	SOCKET dataListenSock = INVALID_SOCKET; // for PASV

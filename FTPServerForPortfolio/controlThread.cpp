@@ -14,7 +14,6 @@ int ControlHandler::sendMsg(const string msg) {
 	if (retval == SOCKET_ERROR) {
 		err_display("sendMsg()");
 	}
-
 	return retval;
 }
 
@@ -52,22 +51,11 @@ int ControlHandler::controlActivate() {
 
 int ControlHandler::commandsHandler() {
 
-	int resLen = strlen(commands);
+
 	int retval{ 0 };
 	vector<string> argv;
-	
-	if (commands[resLen - 2] == '\r' && commands[resLen - 1] == '\n') {  // delete to cargviage 
-		commands[strlen(commands) - 2] = '\0';
-	}
 
-	char * context = NULL;
-	char *token = strtok_s(commands, " ", &context);
-	argv.push_back(commands);
-	argv.push_back(context);
-
-
-	ftpLog(LOG_TRACE, "commands : %s, argc : %d, argv : %s", commands, argv.size(), context);
-
+	commandSeparator(argv, commands);
 
 
 	if (argv[0] == "USER") {
@@ -91,12 +79,7 @@ int ControlHandler::commandsHandler() {
 		sendMsg("227 Entering Passive Mode " + createPASVSock() + CRLF);
 	}
 	else if (argv[0] == "PORT") {
-		for (unsigned int i = 0; i < argv.size(); i++) {
-			ftpLog(LOG_TRACE, "PORT[%d] : %s", i, argv[i].c_str());
-		}
 		createPORTSock(argv[1]);
-		isActive = true;
-		sendMsg("200 PORT command successful." + CRLF);
 	}
 	else if (argv[0] == "LIST") {
 		if (getCurPath()=="") {   
@@ -119,13 +102,8 @@ int ControlHandler::commandsHandler() {
 		sendMsg("250 CDUP Commands successful." + CRLF);
 	}
 	else if (argv[0] == "CWD") {
-	
-		ftpLog(LOG_TRACE, "CWD argc : %d", argv.size());
-		for (unsigned int i = 0; i < argv.size(); i++) {
-			ftpLog(LOG_TRACE, "CWD[%d] : %s", i, argv[i].c_str());
-		}
 		
-		if (argv[1][0] == '/') {  // 클라이언트의 캐시로 이미 목록을 가져간것에서 더 하위로 옮길때는 클라가 full path를 던져줌
+		if (argv[1][0] == '/') {  //  make full path
 			if (argv[1][1] == NULL) {  // CWD '/' 처리
 				movePath("/");
 			}
@@ -133,7 +111,7 @@ int ControlHandler::commandsHandler() {
 				movePath(argv[1] + "/");
 			}
 		}
-		else if(argv[1][0] != '/'){  // relative path
+		else if(argv[1][0] != '/'){  // make relative path
 			addPath(argv[1] + "/");
 		}
 		ftpLog(LOG_TRACE, "Current Path : %s", getCurPath().c_str());
@@ -141,23 +119,18 @@ int ControlHandler::commandsHandler() {
 
 	}
 	else if (argv[0] == "RETR") { // file(s) are transffered from server to client.  RETR <FILENAME>
-		ftpLog(LOG_TRACE, "RETR argc : %d", argv.size());
-	
 		ftpLog(LOG_TRACE, "parsed file name [%s]", argv[1].c_str());
 		setFileName(argv[1]);
 
 		sendMsg("125 Successfully transferred" + CRLF);
 
 		sendFile();
-	
 	}
 	else if (argv[0] == "REST") {
-		ftpLog(LOG_TRACE, "REST argv : %d", argv.size());
 		ftpLog(LOG_TRACE, "REST startSize : %s", argv[1].c_str());
 		setRetrSize(stoi(argv[1]));
 		sendMsg("350 Restarting at " + argv[1] + CRLF);
 	}
-
 	else {
 		ftpLog(LOG_ERROR, "%s : command not defined", argv[0].c_str());
 		//return 2;
@@ -181,7 +154,7 @@ void ControlHandler::sendFile() {
 		}
 	}
 
-	string buf;
+	string buf;  // vector<char> 로도 바꿔서 테스트 필요해보임
 	fileSize = openFile();
 	if (fileSize > (int)buf.max_size()) {
 		ftpLog(LOG_FETAL,"exceed a max file size");
@@ -197,6 +170,7 @@ void ControlHandler::sendFile() {
 		err_display("send()");
 	}
 		
+	shutdown(clientDataSock, SD_BOTH);
 	closesocket(clientDataSock);
 	ifs->close();
 	sendMsg("226 Transfer complete." + CRLF);
@@ -214,21 +188,20 @@ int ControlHandler::openFile() {
 	string targetFile = getRootPath();
 	targetFile += getCurPath(); 
 	targetFile += getFileName();
-	//cout << "targetPath : " << targetFile << endl;
+	ftpLog(LOG_TRACE, "targetPath : %s ", targetFile.c_str());
+
 	ifs = new ifstream;
 	ifs->open(targetFile, std::ios_base::binary);
 	if (!ifs) {
 		sendMsg("550 file open failed" + CRLF);
 		err_quit("file open failed");
 	};
-	//cout << "content : " << ifs->rdbuf();
 	ifs->seekg(startPos, ios::end);
 	fileSize = (int)ifs->tellg();
-	//cout << "file size : " << fileSize << endl;
+	ftpLog(LOG_TRACE, "fileSize : %d ", fileSize);
 	ifs->seekg(startPos, ios::beg);
 	return fileSize;
 }
-
 
 
 void ControlHandler::sendList() {
@@ -244,25 +217,53 @@ void ControlHandler::sendList() {
 			err_display("data accept()");
 			closesocket(dataListenSock);
 		}
-	}
-	ftpLog(LOG_INFO, "[dataChannel - client] : IP = %s, Port = %d\n", 
-		inet_ntoa(dataClient_addr.sin_addr), ntohs(dataClient_addr.sin_port));
+		ftpLog(LOG_INFO, "[PASV.dataChannel - client] : IP = %s, Port = %d\n",
+			inet_ntoa(dataClient_addr.sin_addr), ntohs(dataClient_addr.sin_port));
+		sendMsg("150 Openning data channel for directory listing of " + getCurPath() + CRLF);
 
-	sendMsg("150 Openning data channel for directory listing of " + getCurPath() + CRLF);
-	// getList
-	listLen = getFileList();
-	if (listLen <= 0) {
-		ftpLog(LOG_ERROR,"LIST error");
-		ftpLog(LOG_ERROR,"clientDataSock close() ");
-	}
+		// getList
+		listLen = getFileList();
+		if (listLen <= 0) {
+			ftpLog(LOG_ERROR, "LIST error");
+			ftpLog(LOG_ERROR, "clientDataSock close() ");
+		}
 		retval = send(clientDataSock, dirList, strlen(dirList), 0);
 		if (retval == SOCKET_ERROR) {
 			err_display("send()");
 		}
+
 		delete[] dirList;
+		shutdown(clientDataSock, SD_BOTH);
 		closesocket(clientDataSock);
-	ftpLog(LOG_INFO,"[dataChannel-client] : IP=%s, Port=%d is closed\n",
-		inet_ntoa(dataClient_addr.sin_addr), ntohs(dataClient_addr.sin_port));
+
+		ftpLog(LOG_INFO, "[dataChannel-client] : IP=%s, Port=%d is closed\n",
+			inet_ntoa(dataClient_addr.sin_addr), ntohs(dataClient_addr.sin_port));
+	}
+	else {
+		ftpLog(LOG_INFO, "[PORT.dataChannel - client] : IP = %s, Port = %d\n",
+			inet_ntoa(dataCon_addr.sin_addr), ntohs(dataCon_addr.sin_port));
+
+		sendMsg("150 Openning data channel for directory listing of " + getCurPath() + CRLF);
+
+		// getList
+		listLen = getFileList();
+		if (listLen <= 0) {
+			ftpLog(LOG_ERROR, "LIST error");
+			ftpLog(LOG_ERROR, "clientDataSock close() ");
+		}
+
+		retval = send(clientDataSock, dirList, strlen(dirList), 0);
+		if (retval == SOCKET_ERROR) {
+			err_display("send()");
+		}
+
+		delete[] dirList;
+		shutdown(clientDataSock, SD_BOTH);
+		closesocket(clientDataSock);
+
+		ftpLog(LOG_INFO, "[PORT.dataChannel-client] : IP=%s, Port=%d is closed\n",
+			inet_ntoa(dataCon_addr.sin_addr), ntohs(dataCon_addr.sin_port));
+	}
 
 }
 
@@ -316,8 +317,11 @@ void ControlHandler::createPORTSock(string a) {
 	string ip{ "" };
 	int port{ 0 };
 	int retval{ 0 };
+	LINGER linger;
+	linger.l_onoff = 1;
+	linger.l_linger = 1000;
 
-	replacePORT(argv, ip, port);
+	portDecoder(argv, ip, port, SERVERIP);
 
 	clientDataSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (clientDataSock == INVALID_SOCKET) err_quit("data con socket()");
@@ -326,24 +330,30 @@ void ControlHandler::createPORTSock(string a) {
 	retval = setsockopt(clientDataSock, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(optval));
 	if (retval == SOCKET_ERROR) err_quit("setsockopt() - active");
 
+	retval = setsockopt(clientDataSock, SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger));
+	if (retval == SOCKET_ERROR) err_quit("setsockopt()");
+
 	ZeroMemory(&dataCon_addr, sizeof(dataCon_addr));
 	dataCon_addr.sin_family = AF_INET;
 	dataCon_addr.sin_addr.S_un.S_addr = inet_addr(ip.c_str());
 	dataCon_addr.sin_port = htons(port);
 
-	SOCKADDR_IN serveraddr;
-	serveraddr.sin_family = AF_INET;
-	//serveraddr.sin_addr.S_un.S_addr = inet_addr("192.168.219.101");
-	serveraddr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
-	serveraddr.sin_port = htons(ACTIVEPORT);
-	retval = bind(clientDataSock, (SOCKADDR*)&serveraddr, sizeof(serveraddr));
+	ZeroMemory(&dataListen_addr, sizeof(dataListen_addr));
+	dataListen_addr.sin_family = AF_INET;
+	dataListen_addr.sin_addr.S_un.S_addr = inet_addr(SERVERIP);
+	//dataListen_addr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
+	dataListen_addr.sin_port = htons(ACTIVEPORT);
+	retval = bind(clientDataSock, (SOCKADDR*)&dataListen_addr, sizeof(dataListen_addr));
 	if (retval == SOCKET_ERROR) err_quit("Active bind()");
-
 
 	retval = connect(clientDataSock, (SOCKADDR*)&dataCon_addr, sizeof(dataCon_addr));
 	if (retval == SOCKET_ERROR) err_quit("Active connect()");
 
-	ftpLog(LOG_INFO, "Active Mode Working");
+	isActive = true;
+
+	sendMsg("200 PORT command successful." + CRLF);
+	ftpLog(LOG_INFO, "[PORT.dataChannel - client] : IP = %s, Port = %d\n",
+		inet_ntoa(dataCon_addr.sin_addr), ntohs(dataCon_addr.sin_port));
 
 }
 
@@ -353,6 +363,9 @@ string ControlHandler::createPASVSock() {
 	string port;
 	int retval{ 0 };
 	int len{ 0 };
+	LINGER linger;
+	linger.l_onoff = 1;
+	linger.l_linger = 1000;
 
 	dataListenSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (dataListenSock == INVALID_SOCKET) err_quit("data socket()");
@@ -361,16 +374,13 @@ string ControlHandler::createPASVSock() {
 	retval = setsockopt(dataListenSock, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(optval));
 	if (retval == SOCKET_ERROR) err_quit("setsockopt()");
 
-	/*
-	int sendBufSize{ SEND_BUFSIZE };
-	retval = setsockopt(dataListenSock, SOL_SOCKET, SO_SNDBUF, (char*)&sendBufSize, sizeof(sendBufSize));
+	retval = setsockopt(dataListenSock, SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger));
 	if (retval == SOCKET_ERROR) err_quit("setsockopt()");
-	*/
 
 	ZeroMemory(&dataListen_addr, sizeof(dataListen_addr));
 	dataListen_addr.sin_family = AF_INET;
-	//dataListen_addr.sin_addr.S_un.S_addr = inet_addr("192.168.219.101");
-	dataListen_addr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
+	dataListen_addr.sin_addr.S_un.S_addr = inet_addr(SERVERIP);
+	//dataListen_addr.sin_addr.S_un.S_addr = INADDR_ANY;
 	dataListen_addr.sin_port = htons(0);
 
 	retval = bind(dataListenSock, (SOCKADDR*)&dataListen_addr, sizeof(dataListen_addr));
@@ -383,20 +393,12 @@ string ControlHandler::createPASVSock() {
 
 	len = sizeof(dataListen_addr);
 	getsockname(dataListenSock, (SOCKADDR*)&dataListen_addr, &len);
-	ftpLog(LOG_INFO, "[dataChannel-server(Listen)] : IP=%s, Port=%d\n",
+	ftpLog(LOG_INFO, "[dataChannel-(Listenning)] : IP=%s, Port=%d\n",
 		inet_ntoa(dataListen_addr.sin_addr), ntohs(dataListen_addr.sin_port));
 
 	int sinPort = ntohs(dataListen_addr.sin_port);
-	int highBit = (sinPort >> 8) & 255;
-	int lowBit = sinPort & 255;
+	string addr = inet_ntoa(dataListen_addr.sin_addr);
 
-	port = "(";
-	port += inet_ntoa(dataListen_addr.sin_addr);
-	port += "," + to_string(highBit) + "," + to_string(lowBit) + " )";
 
-	replaceString(port, ".", ",");
-
-	port += ".";
-
-	return port;
+	return portEncoder(sinPort, addr);
 }

@@ -150,15 +150,15 @@
     <ClInclude Include="ErrorControl.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="FtpServer.h" />
     <ClInclude Include="Utils.h" />
-    <ClInclude Include="WaitClient.h" />
     <ClInclude Include="WinSockHeader.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="FtpServer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="controlThread.cpp" />
     <ClCompile Include="Utils.cpp" />
-    <ClCompile Include="WaitClient.cpp" />
     <ClCompile Include="ErrorControl.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

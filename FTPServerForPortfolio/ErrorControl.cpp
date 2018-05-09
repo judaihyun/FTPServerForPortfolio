@@ -26,14 +26,14 @@ void err_display(const char* msg) {
 
 void ftpLog(logLevel level, const char* format, ...) {
 //#ifdef _DEBUG_MODE_
-	//logLevel lev = logLevel::LOG_INFO;
 	char *buf = new char[512];
 	
 	va_list ap;
 	
 	logLevel lev = LOG_TRACE;
 
-	if (lev <= level && level < LOG_TRACE) {
+	//if (lev <= level && level < LOG_TRACE) {
+	if (lev >= level) {
 		switch (level) {
 		case LOG_TRACE: {   // 6
 			va_start(ap, format);

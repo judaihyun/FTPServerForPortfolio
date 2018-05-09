@@ -4,4 +4,8 @@
 
 void replaceString(std::string & strCallId, const char * pszBefore, const char * pszAfter);
 
-void replacePORT(std::string & source, std::string & ip, int & port);
+void portDecoder(std::string &, std::string& , int &, const char*);
+
+string portEncoder(int, string);
+
+void commandSeparator(std::vector<string> &, char *);

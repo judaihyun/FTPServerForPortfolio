@@ -6,15 +6,14 @@
 
 
 
-class WaitClients {
+class FtpServer {
 public:
 
-	~WaitClients() {
-		cout << "server ¼Ò¸êµÊ.\n";
+	~FtpServer() {
 		ftpLog(LOG_DEBUG, "WaitClients Destructed");
 		closesocket(controlSock); WSACleanup(); 
 	};
-	WaitClients(string r) {
+	FtpServer(string r) {
 
 		if (!r.empty()) {
 			argList.rootPath = r;
@@ -33,6 +32,7 @@ private:
 	SOCKADDR_IN clientaddr;
 	SOCKADDR_IN controlAddr;
 	int addrlen{ 0 };
+
 
 	bool setOrNot = false;
 	HANDLE fThread1; 
