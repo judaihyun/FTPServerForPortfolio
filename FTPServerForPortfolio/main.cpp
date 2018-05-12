@@ -8,13 +8,34 @@ int main(){
 	clock_t start, end;
 	start = clock();
 	*/
+	string ip{ "" };
+	string path{ "" };
+	int activePort{ 0 };
+	int controlPort{ 0 };
+	/*
+	cout << "ip : ";
+	cin >> ip;
+	*/
 
-	FtpServer s{ "f:" };  // set root directory.
+	/*
+	cout << "ACTIVE Data Port : ";
+	cin >> activePort;
+	
+	cout << "Control Port : ";
+	cin >> controlPort;
+	*/
+
+
+	FtpServer s;  // set root directory.
+	s.setPath("f:");
+	s.setIp("192.168.219.101");
+	//s.setControlPort(controlPort);
+	//s.setActivePort(activePort);
+
+	cout << ">> ip : " << s.getIp() << ", ActiveDataPort : " << s.getActivePort() << endl;
+	cout << ">> controlPort : " << s.getControlPort() << " , path : " << path << endl;
+
 	s.Starter();
-
-
-
-
 	/*
 	end = clock();
 	std::cout << "CLOCKS_PER_SEC " << CLOCKS_PER_SEC << "\n";

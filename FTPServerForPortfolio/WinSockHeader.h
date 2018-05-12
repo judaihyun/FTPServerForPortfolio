@@ -1,8 +1,6 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #pragma once
 
-#define SERVERIP "192.168.219.101"
-#define ACTIVEPORT 200
 
 #include <WinSock2.h>
 #include <WS2tcpip.h>
@@ -12,7 +10,6 @@
 #include <string>
 #include <fstream>
 #include <queue>
-#include <experimental\filesystem>
 #include <filesystem>
 #include <process.h>
 #include <Ws2def.h>
@@ -25,6 +22,8 @@ namespace fs = std::experimental::filesystem;
 
 struct passToThread {
 	void* sock;
+	int activePort{ 0 };
+	string serverIP{ "" };
 	string rootPath;
 };
 

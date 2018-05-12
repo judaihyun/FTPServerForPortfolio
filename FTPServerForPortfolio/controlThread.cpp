@@ -87,7 +87,7 @@ int ControlHandler::commandsHandler() {
 			return 2;
 		}
 		sendList();
-		sendMsg("226 Successfully transferred " + getCurPath() + "\"" + CRLF);
+
 	}
 	else if (argv[0] == "CDUP") {
 		string cdup = getCurPath();
@@ -122,9 +122,9 @@ int ControlHandler::commandsHandler() {
 		ftpLog(LOG_TRACE, "parsed file name [%s]", argv[1].c_str());
 		setFileName(argv[1]);
 
-		sendMsg("125 Successfully transferred" + CRLF);
-
+	
 		sendFile();
+	
 	}
 	else if (argv[0] == "REST") {
 		ftpLog(LOG_TRACE, "REST startSize : %s", argv[1].c_str());
@@ -141,9 +141,9 @@ int ControlHandler::commandsHandler() {
 
 
 void ControlHandler::sendFile() {
-	int retval{ 0 };
+	int retval = 0;
 	int addrlen{ 0 };
-	int fileSize{ 0 };
+	int fileSize = 0;
 
 	if (isActive == false) {
 		addrlen = sizeof(dataClient_addr);
@@ -153,23 +153,31 @@ void ControlHandler::sendFile() {
 			closesocket(dataListenSock);
 		}
 	}
-
-	string buf;  // vector<char> 로도 바꿔서 테스트 필요해보임
+	
 	fileSize = openFile();
-	if (fileSize > (int)buf.max_size()) {
-		ftpLog(LOG_FETAL,"exceed a max file size");
-		return;
-	}
-	buf.resize(fileSize);
+	cout << "fileSize : " << fileSize << endl;
 	
-	
-	ifs->read(&buf[0], buf.size());
+	sendMsg("125 Data connection already open; Transfer starting." + CRLF);
 
-	retval = send(clientDataSock, buf.c_str(), fileSize, 0); /// buffer사이즈 초과 처리해야함.
-	if (retval == SOCKET_ERROR) {
-		err_display("send()");
+
+	/*
+	while (!ifs->eof()) {
+		fileSize = openFile();
+		char *buf = new char[fileSize];
+		ifs->read(buf, fileSize);
+		cout << "fileSize : " << fileSize << endl;
+
+		retval = send(clientDataSock, buf, fileSize, 0);
+		if (retval == SOCKET_ERROR) {
+			err_display("send()");
+		}
+		cout << "return : " << retval << endl;
+
+		delete[] buf;
 	}
+	*/
 		
+
 	shutdown(clientDataSock, SD_BOTH);
 	closesocket(clientDataSock);
 	ifs->close();
@@ -180,89 +188,64 @@ void ControlHandler::sendFile() {
 
 int ControlHandler::openFile() {
 	int startPos{ 0 };
-	if (getRetrSize() > 0) {
-		startPos = getRetrSize() ;
-	}
-
 	int fileSize{ 0 };
+	if (getRetrSize() > 0) {  // for REST
+		startPos = getRetrSize() ;
+		ifs->seekg(startPos, ios::end);
+		fileSize = ifs->tellg();
+		ifs->seekg(startPos, ios::beg);
+		return fileSize;
+	}
+	
+
 	string targetFile = getRootPath();
-	targetFile += getCurPath(); 
-	targetFile += getFileName();
-	ftpLog(LOG_TRACE, "targetPath : %s ", targetFile.c_str());
+	targetFile += getCurPath() + getFileName(); 
+	//ftpLog(LOG_TRACE, "targetPath : %s ", targetFile.c_str());
 
 	ifs = new ifstream;
+	//ifs->rdbuf()->open(targetFile, std::ios_base::binary);
 	ifs->open(targetFile, std::ios_base::binary);
 	if (!ifs) {
 		sendMsg("550 file open failed" + CRLF);
 		err_quit("file open failed");
 	};
-	ifs->seekg(startPos, ios::end);
-	fileSize = (int)ifs->tellg();
-	ftpLog(LOG_TRACE, "fileSize : %d ", fileSize);
-	ifs->seekg(startPos, ios::beg);
+
+	size_t retval = 0;
+	
+
+		char *buf = new char[fileSize];
+		size_t buffsize = 1 << 20;
+	while (!ifs->eof()) {
+	
+		ifs->read(buf, buffsize);
+		
+		size_t count = ifs->gcount();
+		if (!count) break;
+
+		retval = send(clientDataSock, buf, 1, 0);
+		if (retval == SOCKET_ERROR) {
+			err_display("send()");
+		}
+		cout << "return : " << retval << endl;
+		//delete[] buf;
+	}
+		delete[] buf;
+
+
+	std::cout << " ifstream  file size: " << fileSize << endl;
+
+
 	return fileSize;
 }
 
 
 void ControlHandler::sendList() {
 
-	int retval{ 0 };
-	int addrlen{ 0 };
-	int listLen{ 0 };
-
 	if (isActive == false) {
-		addrlen = sizeof(dataClient_addr);
-		clientDataSock = accept(dataListenSock, (SOCKADDR*)&dataClient_addr, &addrlen);
-		if (clientDataSock == INVALID_SOCKET) {
-			err_display("data accept()");
-			closesocket(dataListenSock);
-		}
-		ftpLog(LOG_INFO, "[PASV.dataChannel - client] : IP = %s, Port = %d\n",
-			inet_ntoa(dataClient_addr.sin_addr), ntohs(dataClient_addr.sin_port));
-		sendMsg("150 Openning data channel for directory listing of " + getCurPath() + CRLF);
-
-		// getList
-		listLen = getFileList();
-		if (listLen <= 0) {
-			ftpLog(LOG_ERROR, "LIST error");
-			ftpLog(LOG_ERROR, "clientDataSock close() ");
-		}
-		retval = send(clientDataSock, dirList, strlen(dirList), 0);
-		if (retval == SOCKET_ERROR) {
-			err_display("send()");
-		}
-
-		delete[] dirList;
-		shutdown(clientDataSock, SD_BOTH);
-		closesocket(clientDataSock);
-
-		ftpLog(LOG_INFO, "[dataChannel-client] : IP=%s, Port=%d is closed\n",
-			inet_ntoa(dataClient_addr.sin_addr), ntohs(dataClient_addr.sin_port));
+		pasvSendList();
 	}
-	else {
-		ftpLog(LOG_INFO, "[PORT.dataChannel - client] : IP = %s, Port = %d\n",
-			inet_ntoa(dataCon_addr.sin_addr), ntohs(dataCon_addr.sin_port));
-
-		sendMsg("150 Openning data channel for directory listing of " + getCurPath() + CRLF);
-
-		// getList
-		listLen = getFileList();
-		if (listLen <= 0) {
-			ftpLog(LOG_ERROR, "LIST error");
-			ftpLog(LOG_ERROR, "clientDataSock close() ");
-		}
-
-		retval = send(clientDataSock, dirList, strlen(dirList), 0);
-		if (retval == SOCKET_ERROR) {
-			err_display("send()");
-		}
-
-		delete[] dirList;
-		shutdown(clientDataSock, SD_BOTH);
-		closesocket(clientDataSock);
-
-		ftpLog(LOG_INFO, "[PORT.dataChannel-client] : IP=%s, Port=%d is closed\n",
-			inet_ntoa(dataCon_addr.sin_addr), ntohs(dataCon_addr.sin_port));
+	else if(isActive == true) {
+		portSendList();
 	}
 
 }
@@ -276,17 +259,19 @@ int ControlHandler::getFileList() {   // for LIST command
 	dirList = new char[DIR_BUFSIZE] {""};
 	char *tempList = new char[DIR_BUFSIZE];
 
-	ftpLog(LOG_INFO, "getFileList() targetPath : [%s]", targetPath.c_str());
+	ftpLog(LOG_TRACE, "getFileList() targetPath : [%s]", targetPath.c_str());
 
 	ostringstream os;
 	// 550 access is denied  처리해야함
-	// 전부(system volume information)까지 보이므로.. 안보이게 처리해야함.
-
 	try {
 		for (auto& p : fs::directory_iterator(targetPath)) {
+			if (p.path().filename() == "System Volume Information" && p.path().filename() == "$RECYCLE.BIN") continue;
+
 			auto ftime = fs::last_write_time(p);
 			time_t cftime = decltype(ftime)::clock::to_time_t(ftime);
 			localtime_s(&ltm, &cftime);
+			//printStatus(p, fs::status(p));
+
 			if (p.status().type() == fs::file_type::directory) {
 				strftime(tempList, 1000, "%m-%d-%g  %R%p", &ltm);
 				os << tempList << " <DIR> " << p.path().filename() << CRLF;
@@ -300,14 +285,17 @@ int ControlHandler::getFileList() {   // for LIST command
 			}
 		}
 	}
-	catch (const std::exception& e) {
-		ftpLog(LOG_FETAL, e.what());
+	catch (const fs::filesystem_error& e){
+		cout << e.code().message() << endl;
 	}
 
 	string temp = os.str();
 	strcpy_s(dirList, DIR_BUFSIZE, temp.c_str());
-	//cout << "---------------LIST-----------------------\n" << dirList << endl;
 	delete[] tempList;
+	cout << "size:" << sizeof(dirList) << endl;
+
+	sendMsg("150 Openning data channel for directory listing of " + getCurPath() + CRLF);
+
 
 	return strlen(dirList);
 }
@@ -321,7 +309,7 @@ void ControlHandler::createPORTSock(string a) {
 	linger.l_onoff = 1;
 	linger.l_linger = 1000;
 
-	portDecoder(argv, ip, port, SERVERIP);
+	portDecoder(argv, ip, port, getServerIp());
 
 	clientDataSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (clientDataSock == INVALID_SOCKET) err_quit("data con socket()");
@@ -333,20 +321,24 @@ void ControlHandler::createPORTSock(string a) {
 	retval = setsockopt(clientDataSock, SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger));
 	if (retval == SOCKET_ERROR) err_quit("setsockopt()");
 
-	ZeroMemory(&dataCon_addr, sizeof(dataCon_addr));
+	ZeroMemory(&dataCon_addr, sizeof(dataCon_addr));   // for connect
 	dataCon_addr.sin_family = AF_INET;
 	dataCon_addr.sin_addr.S_un.S_addr = inet_addr(ip.c_str());
 	dataCon_addr.sin_port = htons(port);
 
-	ZeroMemory(&dataListen_addr, sizeof(dataListen_addr));
+	ZeroMemory(&dataListen_addr, sizeof(dataListen_addr));  // for bind
 	dataListen_addr.sin_family = AF_INET;
-	dataListen_addr.sin_addr.S_un.S_addr = inet_addr(SERVERIP);
+	dataListen_addr.sin_addr.S_un.S_addr = inet_addr(getServerIp().c_str());
 	//dataListen_addr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
-	dataListen_addr.sin_port = htons(ACTIVEPORT);
-	retval = bind(clientDataSock, (SOCKADDR*)&dataListen_addr, sizeof(dataListen_addr));
+	dataListen_addr.sin_port = htons(getActivePort());
+
+	retval = bind(clientDataSock, (SOCKADDR*)&dataListen_addr, sizeof(dataListen_addr));  //bind
 	if (retval == SOCKET_ERROR) err_quit("Active bind()");
 
-	retval = connect(clientDataSock, (SOCKADDR*)&dataCon_addr, sizeof(dataCon_addr));
+	ftpLog(LOG_INFO, "[dataChannel-(Connecting...)] : IP=%s, Port=%d\n",
+		inet_ntoa(dataListen_addr.sin_addr), ntohs(dataListen_addr.sin_port));
+
+	retval = connect(clientDataSock, (SOCKADDR*)&dataCon_addr, sizeof(dataCon_addr));   // connect
 	if (retval == SOCKET_ERROR) err_quit("Active connect()");
 
 	isActive = true;
@@ -354,6 +346,7 @@ void ControlHandler::createPORTSock(string a) {
 	sendMsg("200 PORT command successful." + CRLF);
 	ftpLog(LOG_INFO, "[PORT.dataChannel - client] : IP = %s, Port = %d\n",
 		inet_ntoa(dataCon_addr.sin_addr), ntohs(dataCon_addr.sin_port));
+
 
 }
 
@@ -379,7 +372,7 @@ string ControlHandler::createPASVSock() {
 
 	ZeroMemory(&dataListen_addr, sizeof(dataListen_addr));
 	dataListen_addr.sin_family = AF_INET;
-	dataListen_addr.sin_addr.S_un.S_addr = inet_addr(SERVERIP);
+	dataListen_addr.sin_addr.S_un.S_addr = inet_addr(getServerIp().c_str());
 	//dataListen_addr.sin_addr.S_un.S_addr = INADDR_ANY;
 	dataListen_addr.sin_port = htons(0);
 
@@ -401,4 +394,73 @@ string ControlHandler::createPASVSock() {
 
 
 	return portEncoder(sinPort, addr);
+}
+
+
+
+void ControlHandler::pasvSendList() {
+	int retval{ 0 };
+	int listLen{ 0 };
+	int addrlen{ 0 };
+
+	addrlen = sizeof(dataClient_addr);
+	clientDataSock = accept(dataListenSock, (SOCKADDR*)&dataClient_addr, &addrlen);
+	if (clientDataSock == INVALID_SOCKET) {
+		err_display("data accept()");
+		closesocket(dataListenSock);
+	}
+	ftpLog(LOG_INFO, "[PASV.dataChannel - client] : IP = %s, Port = %d\n",
+		inet_ntoa(dataClient_addr.sin_addr), ntohs(dataClient_addr.sin_port));
+
+	// getList
+	listLen = getFileList();
+	if (listLen <= 0) {
+		ftpLog(LOG_ERROR, "LIST error");
+		ftpLog(LOG_ERROR, "clientDataSock close() ");
+	}
+	retval = send(clientDataSock, dirList, strlen(dirList), 0);
+	if (retval == SOCKET_ERROR) {
+		err_display("send()");
+	}
+
+	delete[] dirList;
+	shutdown(clientDataSock, SD_BOTH);
+	closesocket(clientDataSock);
+
+	sendMsg("226 Successfully transferred " + getCurPath() + "\"" + CRLF);
+
+	ftpLog(LOG_INFO, "[dataChannel-client] : IP=%s, Port=%d is closed\n",
+		inet_ntoa(dataClient_addr.sin_addr), ntohs(dataClient_addr.sin_port));
+}
+
+
+
+void ControlHandler::portSendList() {
+	int retval{ 0 };
+	int listLen{ 0 };
+	int addrlen{ 0 };
+
+	listLen = getFileList();
+
+	if (listLen <= 0) {
+		ftpLog(LOG_ERROR, "LIST error");
+		ftpLog(LOG_ERROR, "clientDataSock close() ");
+		delete[] dirList;
+		shutdown(clientDataSock, SD_BOTH);
+		closesocket(clientDataSock);
+	}
+
+	retval = send(clientDataSock, dirList, strlen(dirList), 0);
+	if (retval == SOCKET_ERROR) {
+		err_display("send()");
+	}
+
+	sendMsg("226 Successfully transferred " + getCurPath() + "\"" + CRLF);
+
+	delete[] dirList;
+	shutdown(clientDataSock, SD_BOTH);
+	closesocket(clientDataSock);
+
+	ftpLog(LOG_INFO, "[PORT.dataChannel-client] : IP=%s, Port=%d is closed\n",
+		inet_ntoa(dataCon_addr.sin_addr), ntohs(dataCon_addr.sin_port));
 }

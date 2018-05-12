@@ -1,6 +1,7 @@
 #include "Utils.h"
 
 
+
 void commandSeparator(std::vector<string> & argv, char *commands) {
 	char * context = nullptr;
 	std::string str{ "" };
@@ -35,7 +36,7 @@ void replaceString(std::string & strCallId, const char * pszBefore, const char *
 	}
 }
 
-void portDecoder(std::string & source, std::string & ip, int & port, const char* serverIP) { //using active mode
+void portDecoder(std::string & source, std::string & ip, int & port, std::string serverIp) { //using active mode
 	replaceString(source, ",", ".");
 	string temp;
 	int high = 0;
@@ -49,7 +50,7 @@ void portDecoder(std::string & source, std::string & ip, int & port, const char*
 	}
 	ip.assign(source, 0, i - 1);
 	if (ip == "127.0.0.1") {
-		ip = serverIP;
+		ip = serverIp;
 	}
 	temp.assign(source, i, source.size());
    
@@ -59,7 +60,7 @@ void portDecoder(std::string & source, std::string & ip, int & port, const char*
 	port = (high * 256) + low;
 }
 
-string portEncoder(int sinPort, string addr) {       // using passive mode
+std::string portEncoder(int sinPort, string addr) {       // using passive mode
 	//cout << "addr[" << addr << "]\n";
 	string port{ "(" };
 
@@ -75,6 +76,22 @@ string portEncoder(int sinPort, string addr) {       // using passive mode
 	return port;
 }
 
+
+void printStatus(const fs::path& p, fs::file_status s)
+{
+	printPerms(fs::status(p).permissions());
+	cout << " " << p;
+	// alternative: switch(s.type()) { case fs::file_type::regular: ...}
+	if (fs::is_regular_file(s)) std::cout << " is a regular file\n";
+	if (fs::is_directory(s)) std::cout << " is a directory\n";
+	if (fs::is_block_file(s)) std::cout << " is a block device\n";
+	if (fs::is_character_file(s)) std::cout << " is a character device\n";
+	if (fs::is_fifo(s)) std::cout << " is a named IPC pipe\n";
+	if (fs::is_socket(s)) std::cout << " is a named IPC socket\n";
+	if (fs::is_symlink(s)) std::cout << " is a symlink\n";
+	if (!fs::exists(s)) std::cout << " does not exist\n";
+}
+
 void printPerms(fs::perms p)
 {
 	std::cout << ((p & fs::perms::owner_read) != fs::perms::none ? "r" : "-")
@@ -87,3 +104,4 @@ void printPerms(fs::perms p)
 		<< ((p & fs::perms::others_write) != fs::perms::none ? "w" : "-")
 		<< ((p & fs::perms::others_exec) != fs::perms::none ? "x" : "-");
 }   // usage : 				printPerms(fs::status(p).permissions());
+
