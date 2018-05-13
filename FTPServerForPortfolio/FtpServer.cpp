@@ -1,13 +1,14 @@
 #include "FtpServer.h"
 #include "Utils.h"
 
-static int accepted{ 0 };
+static int controlId = 0;
 
 void FtpServer::Starter()
 {
 	int retval{ 0 };
 	if (setOrNot == false) {
-		ftpLog(LOG_ERROR,"path not initialized");
+		err_quit("Path Not Set");
+		ftpLog(LOG_ERROR, "Path Not Set");
 		return;
 	}
 
@@ -27,8 +28,7 @@ void FtpServer::Starter()
 	ZeroMemory(&controlAddr, sizeof(controlAddr));
 	controlAddr.sin_family = AF_INET;
 	controlAddr.sin_addr.S_un.S_addr = INADDR_ANY;
-	//if(inet_pton(AF_INET,"127.0.0.1",(&controlAddr.sin_addr.S_un.S_addr)) < 1) err_quit("bind() - inet_pton");
-	controlAddr.sin_port = htons(SERVERPORT);
+	controlAddr.sin_port = htons(controlPort);
 
 	//bind
 	retval = bind(listenSock, (SOCKADDR*)&controlAddr, sizeof(controlAddr));
@@ -38,8 +38,8 @@ void FtpServer::Starter()
 	if (listen(listenSock, SOMAXCONN) == SOCKET_ERROR) {
 		err_quit("listen()");
 	}
-	ftpLog(LOG_INFO,"==================================================");
-	ftpLog(LOG_INFO,"[Server-ControlChannel] : IP=%s, Port=%d", 
+	ftpLog(LOG_INFO, "==================================================");
+	ftpLog(LOG_INFO, "[Server-ControlChannel] : IP=%s, Port=%d",
 		inet_ntoa(controlAddr.sin_addr), ntohs(controlAddr.sin_port));
 
 
@@ -47,7 +47,7 @@ void FtpServer::Starter()
 }
 
 void FtpServer::accepting(SOCKET &listen_sock) {
-
+	int addrlen{ 0 };
 
 	while (1) {
 		addrlen = sizeof(clientaddr);
@@ -56,11 +56,17 @@ void FtpServer::accepting(SOCKET &listen_sock) {
 			err_display("accept()");
 			break;
 		}
-
-		argList.sock = (void*)controlSock; //with root path
-		ftpLog(LOG_INFO,"[Server-Accept] From...  IP=%s, Port=%d",
+;
+		
+		ftpLog(LOG_INFO, "%d [Server-Accept] From...  IP=%s, Port=%d", controlId,
 			inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
-		ftpLog(LOG_INFO,"==================================================");
+		ftpLog(LOG_INFO, "==================================================");
+
+
+		argList.id = controlId++;
+		argList.sock = (void*)controlSock; //with root path
+		argList.activePort = getActivePort();
+		argList.serverIP = getIp();
 
 		fThread1 = (HANDLE)_beginthreadex(NULL, 0, controlHandler, (void*)&argList, 0, NULL);
 		if (fThread1 == NULL) { closesocket(controlSock); }
@@ -69,5 +75,3 @@ void FtpServer::accepting(SOCKET &listen_sock) {
 
 	}
 }
-
-

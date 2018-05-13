@@ -2,17 +2,48 @@
 #pragma comment(lib,"ws2_32")
 #include "FtpServer.h"
 
-int main(){
+int main() {
 
 	/*
 	clock_t start, end;
 	start = clock();
 	*/
 
-	FtpServer s{ "f:" };  // set root directory.
+
+	setLogLevel(logLevel::LOG_INFO);
+
+	string ip{ "" };
+	string path{ "" };
+	int activePort{ 0 };
+	int controlPort{ 0 };
+
+	/*
+	cout << "ACTIVE Data Port : ";
+	cin >> activePort;
+	*/
+
+
+	
+	cout << "ip : ";
+	cin >> ip;
+	cout << "Control Port : ";
+	cin >> controlPort;
+	cout << "FTP root path : " << "(ex : c:/dir, d:, f:/dir/dir2)" << endl;
+	cin >> path;
+
+	FtpServer s;  
+	s.setPath(path);   
+	s.setIp(ip);
+	s.setControlPort(controlPort);
+	//s.setActivePort(activePort);
+
+	cout << "-------------------setting--------------------\n";
+	cout << ">> ip : " << s.getIp() << ", ActiveDataPort : " << s.getActivePort() << endl;
+	cout << ">> controlPort : " << s.getControlPort() << " , path : " << path << endl;
+	cout << "-------------------setting--------------------\n";
+
+
 	s.Starter();
-
-
 
 
 	/*
@@ -27,4 +58,3 @@ int main(){
 
 	return 0;
 }
-
