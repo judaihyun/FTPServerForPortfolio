@@ -49,9 +49,6 @@ void portDecoder(std::string & source, std::string & ip, int & port, std::string
 		}
 	}
 	ip.assign(source, 0, i - 1);
-	if (ip == "127.0.0.1") {
-		ip = serverIp;
-	}
 	temp.assign(source, i, source.size());
 
 	low = stoi(temp.substr(temp.find(".") + 1, temp.size()));

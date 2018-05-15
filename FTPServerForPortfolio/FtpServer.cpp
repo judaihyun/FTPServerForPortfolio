@@ -1,4 +1,4 @@
-#include "FtpServer.h"
+﻿#include "FtpServer.h"
 #include "Utils.h"
 
 static int controlId = 0;
@@ -56,17 +56,22 @@ void FtpServer::accepting(SOCKET &listen_sock) {
 			err_display("accept()");
 			break;
 		}
-;
+	
+		addrlen = sizeof(serverIp);
+		getsockname(controlSock, (SOCKADDR*)&serverIp, &addrlen);
+		ftpLog(LOG_INFO, "[(serverIp)] : IP=%s, Port=%d\n",
+			inet_ntoa(serverIp.sin_addr), ntohs(serverIp.sin_port));
 		
 		ftpLog(LOG_INFO, "%d [Server-Accept] From...  IP=%s, Port=%d", controlId,
 			inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
 		ftpLog(LOG_INFO, "==================================================");
 
 
+		// pass to ControlHandler class
 		argList.id = controlId++;
 		argList.sock = (void*)controlSock; //with root path
 		argList.activePort = getActivePort();
-		argList.serverIP = getIp();
+		argList.serverIP = inet_ntoa(serverIp.sin_addr);
 
 		fThread1 = (HANDLE)_beginthreadex(NULL, 0, controlHandler, (void*)&argList, 0, NULL);
 		if (fThread1 == NULL) { closesocket(controlSock); }
@@ -75,3 +80,5 @@ void FtpServer::accepting(SOCKET &listen_sock) {
 
 	}
 }
+
+

@@ -1,6 +1,14 @@
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
+﻿#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #pragma comment(lib,"ws2_32")
+
+
+
 #include "FtpServer.h"
+
+void GetIPAddress(const char * ifr, unsigned char * out) {
+}
+
+
 
 int main() {
 
@@ -12,33 +20,24 @@ int main() {
 
 	setLogLevel(logLevel::LOG_INFO);
 
-	string ip{ "" };
 	string path{ "" };
 	int activePort{ 0 };
 	int controlPort{ 0 };
 
-	/*
-	cout << "ACTIVE Data Port : ";
-	cin >> activePort;
-	*/
-
-
+	FtpServer s;
 	
-	cout << "ip : ";
-	cin >> ip;
-	cout << "Control Port : ";
-	cin >> controlPort;
-	cout << "FTP root path : " << "(ex : c:/dir, d:, f:/dir/dir2)" << endl;
+	cout << "(ex : c:/dir, d:, f:/dir/dir2)" << endl;
+	cout << "FTP root path : ";
 	cin >> path;
+	
 
-	FtpServer s;  
 	s.setPath(path);   
-	s.setIp(ip);
-	s.setControlPort(controlPort);
+	
+	//s.setControlPort(controlPort);
 	//s.setActivePort(activePort);
 
 	cout << "-------------------setting--------------------\n";
-	cout << ">> ip : " << s.getIp() << ", ActiveDataPort : " << s.getActivePort() << endl;
+	cout << "ActiveDataPort : " << s.getActivePort() << endl;
 	cout << ">> controlPort : " << s.getControlPort() << " , path : " << path << endl;
 	cout << "-------------------setting--------------------\n";
 

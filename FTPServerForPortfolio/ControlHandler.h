@@ -23,7 +23,7 @@ public:
 		closesocket(dataListenSock);
 		closesocket(clientDataSock);
 	}
-	int getIdent() { return argList.id; }
+	int getLogNum() { return argList.id; }
 	int getFileList();
 	void setFileName(string n) { fileName = n; };
 	string getFileName() { return fileName; }
@@ -45,7 +45,6 @@ public:
 	int commandsHandler();
 	void setActivePort(int ap) { activePort = ap; }
 	int getActivePort() { return activePort; };
-	void setServerIp(string ip) { serverIP = ip; }
 	string getServerIp() { return serverIP; }
 private:
 	passToThread argList;

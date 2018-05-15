@@ -1,10 +1,17 @@
 #pragma once
+
 #include "WinSockHeader.h"
 #include "ControlHandler.h"
-#include <cctype>
 #define SERVERPORT 210  //control channel
 
+#include <iphlpapi.h>
+#pragma comment(lib, "IPHLPAPI.lib")
 
+#define WORKING_BUFFER_SIZE 15000
+#define MAX_TRIES 3
+
+#define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
+#define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
 
 class FtpServer {
 public:
@@ -22,19 +29,18 @@ public:
 			argList.rootPath = r;
 			setOrNot = true;
 		}
-	}
+	};
 	void setActivePort(int ap) { activePort = ap; }
-	int getActivePort() { return activePort; };
-	void setControlPort(int p) { controlPort = p; };
-	int getControlPort() { return controlPort; };
-	void setIp(string ip) { serverIP = ip; }
-	string getIp() { return serverIP; }
+	int getActivePort() { return activePort; }
+	void setControlPort(int p) { controlPort = p; }
+	int getControlPort() { return controlPort; }
 
 	void accepting(SOCKET&);
 private:
 	WSADATA wsa;
 	SOCKET listenSock = INVALID_SOCKET;
 	SOCKET controlSock = INVALID_SOCKET;
+	SOCKADDR_IN serverIp;
 	SOCKADDR_IN clientaddr;
 	SOCKADDR_IN controlAddr;
 
@@ -46,3 +52,6 @@ private:
 	HANDLE fThread1;
 	passToThread argList;
 };
+
+
+

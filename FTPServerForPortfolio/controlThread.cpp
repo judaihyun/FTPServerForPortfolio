@@ -18,7 +18,7 @@ int ControlHandler::sendMsg(const string msg) {
 }
 
 int ControlHandler::controlActivate() {
-	ftpLog(LOG_DEBUG, "%d, ControlActivated", getIdent());
+	ftpLog(LOG_DEBUG, "%d, ControlActivated", getLogNum());
 	int addrlen{ 0 };
 	int retval{ 0 };
 	addrlen = sizeof(controlClient_addr);
@@ -114,7 +114,7 @@ int ControlHandler::commandsHandler() {
 	}
 	else if (argv[0] == "PASV") {
 		sendMsg("227 Entering Passive Mode " + createPASVSock() + CRLF);
-		ftpLog(LOG_INFO, "%d - pasv socket : %d ", getIdent(), dataListenSock);
+		ftpLog(LOG_INFO, "%d - pasv socket : %d ", getLogNum(), dataListenSock);
 
 	}
 	else if (argv[0] == "PORT") {
@@ -144,7 +144,7 @@ int ControlHandler::commandsHandler() {
 
 int ControlHandler::portSendFile() {
 	//ftpLog(LOG_DEBUG, "[FUNC] portSendFile()");
-	ftpLog(LOG_INFO, "%d - [FUNC] portSendFile()", getIdent());
+	ftpLog(LOG_INFO, "%d - [FUNC] portSendFile()", getLogNum());
 	int retval = 0;
 	int addrlen{ 0 };
 	int size = 4096;
@@ -161,7 +161,7 @@ int ControlHandler::portSendFile() {
 		retval = send(clientDataSock, buf, size, 0);
 		if (retval == SOCKET_ERROR) {
 			err_display("send()");
-			cout << "send() error id " << getIdent() << endl;
+			cout << "send() error id " << getLogNum() << endl;
 			return -1;
 		}
 	}
@@ -299,18 +299,18 @@ void ControlHandler::createPORTSock(string argv) {
 	retval = bind(clientDataSock, (SOCKADDR*)&dataListen_addr, sizeof(dataListen_addr));  //bind
 	if (retval == SOCKET_ERROR) err_quit("Active bind()");
 
-	ftpLog(LOG_INFO, "%d - [dataChannel-(Connecting...)] : IP=%s, Port=%d\n", getIdent(),
+	ftpLog(LOG_INFO, "%d - [dataChannel-(Connecting...)] : IP=%s, Port=%d\n", getLogNum(),
 		 inet_ntoa(dataListen_addr.sin_addr), ntohs(dataListen_addr.sin_port));
 
 	retval = connect(clientDataSock, (SOCKADDR*)&dataCon_addr, sizeof(dataCon_addr));   // connect
 	if (retval == SOCKET_ERROR) err_quit("Active connect()");
 
-	ftpLog(LOG_INFO, "%d - active socket : %d ", getIdent(), clientDataSock);
+	ftpLog(LOG_INFO, "%d - active socket : %d ", getLogNum(), clientDataSock);
 
 	isActive = true;
 
 	sendMsg("200 PORT command successful." + CRLF);
-	ftpLog(LOG_INFO, "%d - [PORT.dataChannel - client] : IP = %s, Port = %d\n", getIdent(),
+	ftpLog(LOG_INFO, "%d - [PORT.dataChannel - client] : IP = %s, Port = %d\n", getLogNum(),
 		 inet_ntoa(dataCon_addr.sin_addr), ntohs(dataCon_addr.sin_port));
 
 
