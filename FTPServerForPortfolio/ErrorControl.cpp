@@ -62,6 +62,19 @@ void ftpLog(logLevel level, const char* format, ...) {
 			cout << setw(7) << "WARN [" << setw(3) << LOG_NUMBER++ << setw(3) << "] " << buf << endl;
 			break;
 		}
+		case LOG_ERROR: {  // 2
+			va_start(ap, format);
+			vsprintf_s(buf, 512, format, ap);
+			cout << setw(7) << "ERROR [" << setw(3) << LOG_NUMBER++ << setw(3) << "] " << buf << endl;
+			break;
+		}
+		case LOG_FETAL: {  // 1
+			va_start(ap, format);
+			vsprintf_s(buf, 512, format, ap);
+			cout << setw(7) << "FETAL [" << setw(3) << LOG_NUMBER++ << setw(3) << "] " << buf << endl;
+			break;
+		}
+
 
 		}
 	}

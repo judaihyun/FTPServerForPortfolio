@@ -1,11 +1,14 @@
 ﻿#include "ControlHandler.h"
 #include "Utils.h"
 
+CRITICAL_SECTION cs;
 
 unsigned WINAPI controlHandler(void *arg)
 {
+	InitializeCriticalSection(&cs);
 	ControlHandler t = new ControlHandler(arg);
 	t.controlActivate();
+	DeleteCriticalSection(&cs);
 	return 0;
 }
 int ControlHandler::sendMsg(const string msg) {
@@ -18,7 +21,7 @@ int ControlHandler::sendMsg(const string msg) {
 }
 
 int ControlHandler::controlActivate() {
-	ftpLog(LOG_DEBUG, "%d, ControlActivated", getLogNum());
+	ftpLog(LOG_DEBUG, "%d, ControlActivated", getConId());
 	int addrlen{ 0 };
 	int retval{ 0 };
 	addrlen = sizeof(controlClient_addr);
@@ -85,6 +88,10 @@ int ControlHandler::commandsHandler() {
 	}
 	else if (argv[0] == "CDUP") {   // 루트 위로 가면 에러.. 처리 필요.
 		string cdup = getCurPath();
+		if (cdup == "/") {
+			sendMsg("250 CDUP Commands successful." + CRLF);
+			return 1;
+		}
 		cdup.erase(cdup.length() - 1, 1);
 		int pos = cdup.rfind("/", cdup.length() - 1);
 		if (pos == 0) {
@@ -114,8 +121,6 @@ int ControlHandler::commandsHandler() {
 	}
 	else if (argv[0] == "PASV") {
 		sendMsg("227 Entering Passive Mode " + createPASVSock() + CRLF);
-		ftpLog(LOG_INFO, "%d - pasv socket : %d ", getLogNum(), dataListenSock);
-
 	}
 	else if (argv[0] == "PORT") {
 		createPORTSock(argv[1]);
@@ -126,7 +131,10 @@ int ControlHandler::commandsHandler() {
 		if (isActive == true) 
 		{ portSendFile(); 	}
 		else if(isActive == false)
-		{ pasvSendFile(); }
+		{ 
+			cout << "@@@@@@@@ something wrong!!! @@@@@@@@@@@@@@@@\n";
+			pasvSendFile();
+		}
 
 	}
 	else if (argv[0] == "REST") {
@@ -143,15 +151,20 @@ int ControlHandler::commandsHandler() {
 }
 
 int ControlHandler::portSendFile() {
-	//ftpLog(LOG_DEBUG, "[FUNC] portSendFile()");
-	ftpLog(LOG_INFO, "%d - [FUNC] portSendFile()", getLogNum());
-	int retval = 0;
+	EnterCriticalSection(&cs);
+	ftpLog(LOG_INFO, "%d - [FUNC] portSendFile()", getConId());
+	__int64 retval = 0;
 	int addrlen{ 0 };
 	int size = 4096;
 	__int64 fileSize = 0;
+	string name = getFileName();
 
-	openFile();
-
+	fileSize = openFile();
+	if (fileSize < 0) {
+		ftpLog(LOG_FETAL, "open error()");
+		return -1;
+	}
+	
 	char buf[4096];
 	while (!ifs->eof()) {
 
@@ -161,21 +174,59 @@ int ControlHandler::portSendFile() {
 		retval = send(clientDataSock, buf, size, 0);
 		if (retval == SOCKET_ERROR) {
 			err_display("send()");
-			cout << "send() error id " << getLogNum() << endl;
 			return -1;
 		}
 	}
+	
+		
+	ifs->close();
 
 	shutdown(clientDataSock, SD_SEND);
 	retval = closesocket(clientDataSock);
 	if (retval == SOCKET_ERROR) {
 		err_display("close()");
 	}
-	ifs->close();
+/*
+	cout << "close socket id : " << clientDataSock << endl;
+	cout << "ifs id : " << ifs << ", " << getConId() << " - " << name << " closed\n";
+*/
+	
 	sendMsg("226 Transfer complete." + CRLF);
 
+	LeaveCriticalSection(&cs);
 	return 1;
 }
+
+
+
+__int64 ControlHandler::openFile() {
+	ftpLog(LOG_TRACE, "openFile(), fileName : %s ", getFileName().c_str());
+	__int64 startPos{ 0 };
+	__int64 fileSize{ 0 };
+	string targetFile = getRootPath();
+	targetFile += getCurPath() + getFileName();
+
+	ifs = new ifstream;
+	ifs->open(targetFile, std::ios_base::binary);
+	if (getRetrSize() > 0) {  // for REST
+		startPos = getRetrSize();
+		ifs->seekg(startPos, ios::beg);
+		return fileSize;
+	}
+
+	if (!ifs) {
+		sendMsg("550 file open failed" + CRLF);
+		err_quit("file open failed");
+		return -1;
+	}
+	ifs->seekg(0, ios::end);
+	fileSize = ifs->tellg();
+	ifs->seekg(0, ios::beg);
+
+	sendMsg("125 Data connection already open; Transfer starting." + CRLF);
+	return fileSize;
+}
+
 
 
 int ControlHandler::pasvSendFile() {
@@ -194,7 +245,7 @@ int ControlHandler::pasvSendFile() {
 	ftpLog(LOG_INFO, "[PASV.dataChannel - client] : IP = %s, Port = %d\n",
 		inet_ntoa(dataClient_addr.sin_addr), ntohs(dataClient_addr.sin_port));
 
-	openFile();
+	fileSize = openFile();
 
 	char buf[4096];
 	while (!ifs->eof()) {
@@ -280,10 +331,8 @@ void ControlHandler::createPORTSock(string argv) {
 	retval = setsockopt(clientDataSock, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(optval));
 	if (retval == SOCKET_ERROR) err_quit("setsockopt() - active");
 
-	/*
 	retval = setsockopt(clientDataSock, SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger));
 	if (retval == SOCKET_ERROR) err_quit("setsockopt()");
-	*/
 
 	ZeroMemory(&dataCon_addr, sizeof(dataCon_addr));   // for connect
 	dataCon_addr.sin_family = AF_INET;
@@ -299,23 +348,18 @@ void ControlHandler::createPORTSock(string argv) {
 	retval = bind(clientDataSock, (SOCKADDR*)&dataListen_addr, sizeof(dataListen_addr));  //bind
 	if (retval == SOCKET_ERROR) err_quit("Active bind()");
 
-	ftpLog(LOG_INFO, "%d - [dataChannel-(Connecting...)] : IP=%s, Port=%d\n", getLogNum(),
+	ftpLog(LOG_INFO, "%d - [dataChannel-(Connecting...)] : IP=%s, Port=%d\n", getConId(),
 		 inet_ntoa(dataListen_addr.sin_addr), ntohs(dataListen_addr.sin_port));
 
 	retval = connect(clientDataSock, (SOCKADDR*)&dataCon_addr, sizeof(dataCon_addr));   // connect
 	if (retval == SOCKET_ERROR) err_quit("Active connect()");
-
-	ftpLog(LOG_INFO, "%d - active socket : %d ", getLogNum(), clientDataSock);
+	ftpLog(LOG_INFO, "%d - [PORT.dataChannel - client] : IP = %s, Port = %d\n", getConId(),
+		inet_ntoa(dataCon_addr.sin_addr), ntohs(dataCon_addr.sin_port));
 
 	isActive = true;
 
 	sendMsg("200 PORT command successful." + CRLF);
-	ftpLog(LOG_INFO, "%d - [PORT.dataChannel - client] : IP = %s, Port = %d\n", getLogNum(),
-		 inet_ntoa(dataCon_addr.sin_addr), ntohs(dataCon_addr.sin_port));
-
-
 }
-
 
 
 
@@ -337,8 +381,7 @@ void ControlHandler::pasvSendList() {
 	// getList
 	listLen = getFileList();
 	if (listLen <= 0) {
-		ftpLog(LOG_ERROR, "LIST error");
-		ftpLog(LOG_ERROR, "clientDataSock close() ");
+		ftpLog(LOG_DEBUG, "this dir is empty");
 	}
 	retval = send(clientDataSock, dirList, strlen(dirList), 0);
 	if (retval == SOCKET_ERROR) {
@@ -357,6 +400,8 @@ void ControlHandler::pasvSendList() {
 
 
 void ControlHandler::portSendList() {
+	ftpLog(LOG_DEBUG, "[FUNC]portSendList()");
+
 	int retval{ 0 };
 	int listLen{ 0 };
 	int addrlen{ 0 };
@@ -364,11 +409,7 @@ void ControlHandler::portSendList() {
 	listLen = getFileList();
 
 	if (listLen <= 0) {
-		ftpLog(LOG_ERROR, "LIST error");
-		ftpLog(LOG_ERROR, "clientDataSock close() ");
-		delete[] dirList;
-		shutdown(clientDataSock, SD_BOTH);
-		closesocket(clientDataSock);
+		ftpLog(LOG_DEBUG, "this dir is empty");
 	}
 
 	retval = send(clientDataSock, dirList, strlen(dirList), 0);
@@ -425,41 +466,13 @@ int ControlHandler::getFileList() {   // for LIST command
 	catch (const fs::filesystem_error& e) {
 		cout << e.code().message() << endl;
 	}
-
 	string temp = os.str();
 	strcpy_s(dirList, DIR_BUFSIZE, temp.c_str());
 	delete[] tempList;
 
 	//sendMsg("150 Openning data channel for directory listing of " + getCurPath() + CRLF);
-
-
+	
 	return strlen(dirList);
 }
 
 
-
-
-__int64 ControlHandler::openFile() {
-	ftpLog(LOG_TRACE, "openFile(), fileName : %s ", getFileName().c_str());
-	__int64 startPos{ 0 };
-	__int64 fileSize{ 0 };
-	string targetFile = getRootPath();
-	targetFile += getCurPath() + getFileName();
-
-	ifs = new ifstream;
-	ifs->open(targetFile, std::ios_base::binary);
-
-	if (getRetrSize() > 0) {  // for REST
-		startPos = getRetrSize();
-		ifs->seekg(startPos, ios::beg);
-		return fileSize;
-	}
-
-	if (!ifs) {
-		sendMsg("550 file open failed" + CRLF);
-		err_quit("file open failed");
-	}
-
-	sendMsg("125 Data connection already open; Transfer starting." + CRLF);
-	return fileSize;
-}

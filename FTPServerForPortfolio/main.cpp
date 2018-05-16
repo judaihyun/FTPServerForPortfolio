@@ -24,14 +24,17 @@ int main() {
 	int activePort{ 0 };
 	int controlPort{ 0 };
 
+
 	FtpServer s;
 	
+	/*
 	cout << "(ex : c:/dir, d:, f:/dir/dir2)" << endl;
 	cout << "FTP root path : ";
 	cin >> path;
+	*/
 	
 
-	s.setPath(path);   
+	s.setPath("f:");   
 	
 	//s.setControlPort(controlPort);
 	//s.setActivePort(activePort);

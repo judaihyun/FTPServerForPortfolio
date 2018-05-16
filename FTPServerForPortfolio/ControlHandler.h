@@ -23,7 +23,7 @@ public:
 		closesocket(dataListenSock);
 		closesocket(clientDataSock);
 	}
-	int getLogNum() { return argList.id; }
+	int getConId() { return argList.id; }
 	int getFileList();
 	void setFileName(string n) { fileName = n; };
 	string getFileName() { return fileName; }
