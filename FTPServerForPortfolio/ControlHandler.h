@@ -4,6 +4,7 @@
 
 #define COM_BUFSIZE 1024  // for command
 #define RES_BUFSIZE 1024  // for response
+#define MTU_FILE 4096
 #define DIR_BUFSIZE 10000000
 #define MAX_FILE_SIZE 10000000
 
@@ -28,6 +29,7 @@ public:
 	void setFileName(string n) { fileName = n; };
 	string getFileName() { return fileName; }
 	__int64 openFile();
+	__int64 openBulkFile();
 	string createPASVSock(); // passive
 	void createPORTSock(string); // active
 	string getRootPath() { if (rootPath == "") { err_quit("ControlHandler() root path"); } return rootPath; }
@@ -37,6 +39,7 @@ public:
 	int controlActivate();
 	int sendMsg(const string);
 	int pasvSendFile();
+	int pasvBulkSendFile();
 	int portSendFile();
 	void setRetrSize( __int64 r) { sizeRETR = r; };
 	__int64 getRetrSize() { return sizeRETR; };

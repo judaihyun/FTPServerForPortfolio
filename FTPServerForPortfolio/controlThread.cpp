@@ -33,6 +33,7 @@ int ControlHandler::controlActivate() {
 	}
 
 	while (1) {
+		commands[0] = '\0';
 		retval = recv(controlSock, commands, COM_BUFSIZE, 0);
 		if (retval == SOCKET_ERROR) {
 			err_display("recv()");
@@ -105,7 +106,7 @@ int ControlHandler::commandsHandler() {
 	else if (argv[0] == "CWD") {
 
 		if (argv[1][0] == '/') {  //  make full path
-			if (argv[1][1] == NULL) {  // CWD '/' Ã³¸®
+			if (argv[1][1] == NULL) {  // CWD '/' 
 				movePath("/");
 			}
 			else {
@@ -132,10 +133,18 @@ int ControlHandler::commandsHandler() {
 		{ portSendFile(); 	}
 		else if(isActive == false)
 		{ 
-			cout << "@@@@@@@@ something wrong!!! @@@@@@@@@@@@@@@@\n";
 			pasvSendFile();
 		}
-
+	}
+	else if (argv[0] == "BULK") { /* not defined */
+		ftpLog(LOG_TRACE, "parsed file name [%s]", argv[1].c_str());
+		setFileName(argv[1]);
+		if (isActive == true) 
+		{ portSendFile(); 	}
+		else if(isActive == false)
+		{ 
+			pasvBulkSendFile();
+		}
 	}
 	else if (argv[0] == "REST") {
 		ftpLog(LOG_TRACE, "REST startSize : %s", argv[1].c_str());
@@ -186,10 +195,6 @@ int ControlHandler::portSendFile() {
 	if (retval == SOCKET_ERROR) {
 		err_display("close()");
 	}
-/*
-	cout << "close socket id : " << clientDataSock << endl;
-	cout << "ifs id : " << ifs << ", " << getConId() << " - " << name << " closed\n";
-*/
 	
 	sendMsg("226 Transfer complete." + CRLF);
 
@@ -200,7 +205,35 @@ int ControlHandler::portSendFile() {
 
 
 __int64 ControlHandler::openFile() {
-	ftpLog(LOG_TRACE, "openFile(), fileName : %s ", getFileName().c_str());
+	ftpLog(LOG_TRACE, "openFile(), fileName : [%s] ", getFileName().c_str());
+	__int64 startPos{ 0 };
+	__int64 fileSize{ 0 };
+	string targetFile = getRootPath();
+	targetFile += getCurPath() + getFileName();
+
+	ifs = new ifstream;
+	ifs->open(targetFile, std::ios_base::binary);
+
+	if (getRetrSize() > 0) {  // for REST
+		startPos = getRetrSize();
+		ifs->seekg(startPos, ios::beg);
+		return fileSize;
+	}
+
+	if (!ifs) {
+		sendMsg("550 file open failed" + CRLF);
+		err_quit("file open failed");
+		return -1;
+	}
+	
+	fileSize = fs::file_size(targetFile);
+
+	sendMsg("125 Data connection already open; Transfer starting." + CRLF);
+	return fileSize;
+}
+
+__int64 ControlHandler::openBulkFile() {
+	ftpLog(LOG_TRACE, "openBulkFile(), fileName : %s ", getFileName().c_str());
 	__int64 startPos{ 0 };
 	__int64 fileSize{ 0 };
 	string targetFile = getRootPath();
@@ -219,21 +252,56 @@ __int64 ControlHandler::openFile() {
 		err_quit("file open failed");
 		return -1;
 	}
-	ifs->seekg(0, ios::end);
-	fileSize = ifs->tellg();
-	ifs->seekg(0, ios::beg);
+
+	fileSize = fs::file_size(targetFile);
 
 	sendMsg("125 Data connection already open; Transfer starting." + CRLF);
 	return fileSize;
 }
 
 
+int ControlHandler::pasvBulkSendFile() {
+	ftpLog(LOG_DEBUG, "[FUNC] pasvBulkSendFile()");
+	int retval = 0;
+	int addrlen{ 0 };
+	__int64 fileSize = 0;
+
+	addrlen = sizeof(dataClient_addr);
+	clientDataSock = accept(dataListenSock, (SOCKADDR*)&dataClient_addr, &addrlen);
+	if (clientDataSock == INVALID_SOCKET) {
+		err_display("data-pasv accept()");
+		closesocket(dataListenSock);
+	}
+	ftpLog(LOG_INFO, "[PASV.dataChannel - client] : IP = %s, Port = %d\n",
+		inet_ntoa(dataClient_addr.sin_addr), ntohs(dataClient_addr.sin_port));
+
+	fileSize = openBulkFile();
+	/*
+	char buf[MTU_FILE];
+	int size = 4096;
+	while (!ifs->eof()) {
+
+		if (!ifs->read(buf, size)) {
+			size = (int)ifs->gcount();
+		}
+		retval = send(clientDataSock, buf, size, 0);
+		if (retval == SOCKET_ERROR) {
+			err_display("send()");
+			return -1;
+		}
+	}
+	closesocket(clientDataSock);
+	ifs->close();
+	sendMsg("226 Transfer complete." + CRLF);
+	*/
+
+	return 1;
+}
 
 int ControlHandler::pasvSendFile() {
 	ftpLog(LOG_DEBUG, "[FUNC] pasvSendFile()");
 	int retval = 0;
 	int addrlen{ 0 };
-	int size = 4096;
 	__int64 fileSize = 0;
 
 	addrlen = sizeof(dataClient_addr);
@@ -247,7 +315,8 @@ int ControlHandler::pasvSendFile() {
 
 	fileSize = openFile();
 
-	char buf[4096];
+	char buf[MTU_FILE];
+	int size = 4096;
 	while (!ifs->eof()) {
 
 		if (!ifs->read(buf, size)) {
@@ -258,6 +327,12 @@ int ControlHandler::pasvSendFile() {
 			err_display("send()");
 			return -1;
 		}
+	}
+
+	retval = send(clientDataSock, buf, size, 0);
+	if (retval == SOCKET_ERROR) {
+		err_display("send()");
+		return -1;
 	}
 	closesocket(clientDataSock);
 	ifs->close();
@@ -381,7 +456,7 @@ void ControlHandler::pasvSendList() {
 	// getList
 	listLen = getFileList();
 	if (listLen <= 0) {
-		ftpLog(LOG_DEBUG, "this dir is empty");
+		ftpLog(LOG_DEBUG, "Dir Empty");
 	}
 	retval = send(clientDataSock, dirList, strlen(dirList), 0);
 	if (retval == SOCKET_ERROR) {
@@ -409,7 +484,7 @@ void ControlHandler::portSendList() {
 	listLen = getFileList();
 
 	if (listLen <= 0) {
-		ftpLog(LOG_DEBUG, "this dir is empty");
+		ftpLog(LOG_DEBUG, "Dir Empty");
 	}
 
 	retval = send(clientDataSock, dirList, strlen(dirList), 0);

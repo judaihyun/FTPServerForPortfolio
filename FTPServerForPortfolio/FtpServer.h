@@ -1,17 +1,22 @@
 #pragma once
-
+#pragma comment(lib, "Ws2_32.lib")
+#include "libssh2_config.h"
+#include <libssh2.h>
+#include <libssh2_sftp.h>
 #include "WinSockHeader.h"
 #include "ControlHandler.h"
+
+#define LIBSSH2_INIT_NO_CRYPTO 0x0001
 #define SERVERPORT 210  //control channel
 
-#include <iphlpapi.h>
-#pragma comment(lib, "IPHLPAPI.lib")
+/*
+const char *keyfile1 = ".ssh/id_rsa.pub";
+const char *keyfile2 = ".ssh/id_rsa";
+const char *username = "username";
+const char *password = "password";
+const char *sftppath = "f:";
+*/
 
-#define WORKING_BUFFER_SIZE 15000
-#define MAX_TRIES 3
-
-#define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
-#define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
 
 class FtpServer {
 public:
@@ -35,6 +40,8 @@ public:
 	void setControlPort(int p) { controlPort = p; }
 	int getControlPort() { return controlPort; }
 
+	void setSecureFTP(bool i) { secureFTP = i; }
+
 	void accepting(SOCKET&);
 private:
 	WSADATA wsa;
@@ -51,6 +58,17 @@ private:
 	bool setOrNot = false;
 	HANDLE fThread1;
 	passToThread argList;
+
+	bool secureFTP = NULL;
+	
+	int sock, i, auth_pw = 0;
+	const char *fingerprint;
+	char *userauthlist;
+	LIBSSH2_SESSION *session;
+	int rc;
+	LIBSSH2_SFTP *sftp_session;
+	LIBSSH2_SFTP_HANDLE *sftp_handle;
+	
 };
 
 

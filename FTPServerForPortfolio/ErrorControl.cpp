@@ -35,6 +35,7 @@ void ftpLog(logLevel level, const char* format, ...) {
 	char *buf = new char[512];
 	
 	va_list ap;
+	lev = LOG_TRACE;
 
 	if (lev >= level) {
 		switch (level) {

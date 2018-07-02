@@ -26,6 +26,7 @@ void commandSeparator(std::vector<string> & argv, char *commands) {
 
 void replaceString(std::string & strCallId, const char * pszBefore, const char * pszAfter)
 {
+	/* http://blog.naver.com/PostView.nhn?blogId=websearch&logNo=70138935676&redirect=Dlog&widgetTypeCall=true  */
 	size_t iPos = strCallId.find(pszBefore);
 	size_t iBeforeLen = strlen(pszBefore);
 
@@ -74,7 +75,7 @@ std::string portEncoder(int sinPort, string addr) {       // using passive mode
 }
 
 
-void printStatus(const fs::path& p, fs::file_status s)
+void printStatus(const fs::path& p, fs::file_status s) /* https://en.cppreference.com/w/cpp/experimental/fs/permissions */
 {
 	printPerms(fs::status(p).permissions());
 	cout << " " << p;
@@ -89,7 +90,7 @@ void printStatus(const fs::path& p, fs::file_status s)
 	if (!fs::exists(s)) std::cout << " does not exist\n";
 }
 
-void printPerms(fs::perms p)
+void printPerms(fs::perms p) /* https://en.cppreference.com/w/cpp/experimental/fs/permissions  */
 {
 	std::cout << ((p & fs::perms::owner_read) != fs::perms::none ? "r" : "-")
 		<< ((p & fs::perms::owner_write) != fs::perms::none ? "w" : "-")
