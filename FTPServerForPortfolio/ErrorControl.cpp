@@ -1,4 +1,4 @@
-#include "ErrorControl.h"
+#include "errorcontrol.h"
 
 
 void err_quit(const char * msg) {

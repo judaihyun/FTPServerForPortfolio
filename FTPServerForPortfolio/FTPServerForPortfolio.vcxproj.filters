@@ -15,19 +15,19 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ErrorControl.h">
+    <ClInclude Include="utils.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="WinSockHeader.h">
+    <ClInclude Include="controlhandler.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Utils.h">
+    <ClInclude Include="errorcontrol.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="ControlHandler.h">
+    <ClInclude Include="ftpserver.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="FtpServer.h">
+    <ClInclude Include="winsockheader.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
@@ -35,16 +35,16 @@
     <ClCompile Include="main.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="controlThread.cpp">
+    <ClCompile Include="utils.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Utils.cpp">
+    <ClCompile Include="controlhandler.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="ErrorControl.cpp">
+    <ClCompile Include="errorcontrol.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="FtpServer.cpp">
+    <ClCompile Include="ftpserver.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>

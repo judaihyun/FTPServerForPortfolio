@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "WinSockHeader.h"
+#include "winsockheader.h"
 
 
 #define COM_BUFSIZE 1024  // for command

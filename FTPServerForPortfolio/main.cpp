@@ -1,8 +1,4 @@
-﻿#define _WINSOCK_DEPRECATED_NO_WARNINGS
-#pragma comment(lib,"ws2_32")
-
-
-#include "FtpServer.h"
+#include "ftpserver.h"
 
 
 int main() {
@@ -10,24 +6,17 @@ int main() {
 
 	setLogLevel(logLevel::LOG_INFO);
 
-	string path{ "" };
-	int activePort{ 0 };
-	int controlPort{ 0 };
-
 	FtpServer s;
-	s.setSecureFTP(true);
-	
+	s.setPath("f:");
 
-	s.setPath("f:");   
-	
 
 	cout << "-------------------setting--------------------\n";
 	cout << "ActiveDataPort : " << s.getActivePort() << endl;
-	cout << ">> controlPort : " << s.getControlPort() << " , path : " << path << endl;
+	cout << ">> controlPort : " << s.getControlPort() << " , path : " << s.getPath() << endl;
 	cout << "-------------------setting--------------------\n";
 
 
-	s.Starter();
+	s.starter();
 
 
 

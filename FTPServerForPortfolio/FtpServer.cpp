@@ -1,39 +1,39 @@
-﻿#include "FtpServer.h"
-#include "Utils.h"
+﻿#include "ftpserver.h"
+#include "utils.h"
 static int controlId = 0;
 
-#include "libssh2_config.h"
-#include <libssh2.h>
-#include <libssh2_sftp.h>
-void FtpServer::Starter()
+void FtpServer::setPath(string rootPath)
+{
+	if (!rootPath.empty())
+	{
+		argList.rootPath = rootPath;
+		pathIsSet = true;
+	}
+}
+
+void FtpServer::starter()
 {
 	char buf[20];
 
-	int retval{ 0 };
-	if (setOrNot == false) {
+	int retValue{ 0 };
+	if (pathIsSet == false) {
 		err_quit("Path Not Set");
 		ftpLog(LOG_ERROR, "Path Not Set");
 		return;
 	}
 
-	rc = libssh2_init(0);
-	if (rc != 0) {
-		ftpLog(LOG_ERROR, "libssh2 init failed (%d) \n", rc);
-	}
-	
-
-
 	//socket
 	listenSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (listenSock == INVALID_SOCKET) err_quit("socket()");
 
+
 	bool optval = true;
-	retval = setsockopt(listenSock, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(optval));
-	if (retval == SOCKET_ERROR) err_quit("setsockopt()");
+	retValue = setsockopt(listenSock, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(optval));
+	if (retValue == SOCKET_ERROR) err_quit("setsockopt()");
 
 	bool bEnable = true;
-	retval = setsockopt(listenSock, SOL_SOCKET, SO_KEEPALIVE, (char*)&bEnable, sizeof(bEnable));
-	if (retval == SOCKET_ERROR) err_quit("setsockopt()");
+	retValue = setsockopt(listenSock, SOL_SOCKET, SO_KEEPALIVE, (char*)&bEnable, sizeof(bEnable));
+	if (retValue == SOCKET_ERROR) err_quit("setsockopt()");
 
 
 	ZeroMemory(&controlAddr, sizeof(controlAddr));
@@ -42,8 +42,8 @@ void FtpServer::Starter()
 	controlAddr.sin_port = htons(controlPort);
 
 	//bind
-	retval = bind(listenSock, (SOCKADDR*)&controlAddr, sizeof(controlAddr));
-	if (retval == SOCKET_ERROR) err_quit("bind()");
+	retValue = bind(listenSock, (SOCKADDR*)&controlAddr, sizeof(controlAddr));
+	if (retValue == SOCKET_ERROR) err_quit("bind()");
 
 	//listen socket
 	if (listen(listenSock, SOMAXCONN) == SOCKET_ERROR) {
@@ -56,51 +56,6 @@ void FtpServer::Starter()
 
 	accepting(listenSock);
 }
-
-/*
-void FtpServer::Starter()
-{
-	int retval{ 0 };
-	if (setOrNot == false) {
-		err_quit("Path Not Set");
-		ftpLog(LOG_ERROR, "Path Not Set");
-		return;
-	}
-
-	//socket
-	listenSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (listenSock == INVALID_SOCKET) err_quit("socket()");
-
-	bool optval = true;
-	retval = setsockopt(listenSock, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(optval));
-	if (retval == SOCKET_ERROR) err_quit("setsockopt()");
-
-	bool bEnable = true;
-	retval = setsockopt(listenSock, SOL_SOCKET, SO_KEEPALIVE, (char*)&bEnable, sizeof(bEnable));
-	if (retval == SOCKET_ERROR) err_quit("setsockopt()");
-
-
-	ZeroMemory(&controlAddr, sizeof(controlAddr));
-	controlAddr.sin_family = AF_INET;
-	controlAddr.sin_addr.S_un.S_addr = INADDR_ANY;
-	controlAddr.sin_port = htons(controlPort);
-
-	//bind
-	retval = bind(listenSock, (SOCKADDR*)&controlAddr, sizeof(controlAddr));
-	if (retval == SOCKET_ERROR) err_quit("bind()");
-
-	//listen socket
-	if (listen(listenSock, SOMAXCONN) == SOCKET_ERROR) {
-		err_quit("listen()");
-	}
-	ftpLog(LOG_INFO, "==================================================");
-	ftpLog(LOG_INFO, "[Server-ControlChannel] : IP=%s, Port=%d",
-		inet_ntoa(controlAddr.sin_addr), ntohs(controlAddr.sin_port));
-
-
-	accepting(listenSock);
-}
-*/
 
 void FtpServer::accepting(SOCKET &listen_sock) {
 	char buf[20];

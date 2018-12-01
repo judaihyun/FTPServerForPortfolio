@@ -14,7 +14,7 @@
 #include <Ws2def.h>
 #include <Wsrm.h>
 
-#include "ErrorControl.h"
+#include "errorcontrol.h"
 using namespace std;
 namespace fs = std::experimental::filesystem;
 
