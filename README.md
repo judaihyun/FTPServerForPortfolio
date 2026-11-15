@@ -1,4 +1,51 @@
 # FTPServerForPortfolio
-Winsock2, RFC959, FTP Server, not client
 
-default port ( active data port : 200, control port : 210 )
+> **C++ 학습 3개월 차에 만든 첫 포트폴리오 (2018~2019)**
+> 프레임워크 없이 Winsock2로 RFC 959(FTP)를 직접 구현한 학습용 프로젝트입니다.
+> 짝이 되는 GUI 클라이언트: [QtFTPClient](https://github.com/judaihyun/QtFTPClient)
+
+## 개요
+
+- Windows / C++ / Winsock2, 외부 라이브러리 없음
+- 제어 채널과 데이터 채널 분리, **Passive(PASV) / Active(PORT) 모드 모두 구현**
+- 접속마다 스레드 하나(`_beginthreadex`)를 할당하는 동시 접속 구조
+- 기본 포트: 제어 채널 `210`, Active 데이터 포트 `200`
+
+## 구조
+
+```
+main.cpp            서버 생성, 루트 경로 지정, 실행
+FtpServer.cpp       listen → accept 루프 → 접속마다 ControlHandler 스레드 생성
+controlhandler.cpp  명령 파싱·분기, 데이터 채널(PASV/PORT) 생성, 파일·목록 전송
+Utils.cpp           명령 분리, PORT/PASV 주소 인코딩·디코딩 (h1,h2,h3,h4,p1,p2)
+ErrorControl.cpp    소켓 에러 처리, 레벨별 로그
+```
+
+## 지원 명령
+
+`USER` `PWD` `CWD` `CDUP` `LIST` `TYPE` `SYST` `FEAT` `PASV` `PORT` `RETR` `REST`
+
+읽기 전용 다운로드 서버입니다. (`STOR`, `PASS`, `QUIT` 등은 미구현)
+
+## 지금 다시 본다면 고칠 점
+
+몇 년 뒤 실무 경험을 쌓고 다시 읽어 보며 정리한 회고입니다.
+당시에는 보이지 않았던 문제들입니다.
+
+| 영역 | 문제 | 개선 방향 |
+|---|---|---|
+| 보안 | `USER`만 받으면 인증 없이 로그인, `PASS` 미구현 | 계정 인증 추가, 미인증 상태에서는 `530` 응답 |
+| 보안 | `CWD ..` 경로를 정규화하지 않아 루트 밖으로 이동 가능 | canonical 경로로 변환 후 루트 하위인지 검증 |
+| 안정성 | 접속별 처리 경로에서 `exit()`를 호출해 클라이언트 하나의 오류로 서버 전체가 종료 | 오류를 해당 접속으로 한정하고 FTP 에러 코드로 응답 |
+| 안정성 | 파일 열기 실패를 감지하지 못함(스트림이 아닌 포인터를 검사) | `is_open()` 확인, 예외 처리 |
+| 동시성 | 스레드 인자를 공유 멤버의 주소로 넘겨 경쟁 상태 발생 | 접속마다 인자를 새로 할당해 소유권을 넘김 |
+| 동시성 | 전역 `CRITICAL_SECTION`을 스레드마다 재초기화, 에러 경로에서 Leave 누락 | RAII 잠금(`std::mutex` + `lock_guard`) 사용 |
+| 프로토콜 | TCP 스트림을 메시지 단위로 가정함(`recv` 한 번 = 명령 하나) | `\r\n` 기준으로 버퍼링해 명령 단위로 분리 |
+| 프로토콜 | PASV 전송 시 마지막 버퍼를 한 번 더 전송, 모르는 명령에 응답 없음 | 전송 루프 수정, `500/502` 응답 |
+| 자원 관리 | `new` 후 해제하지 않음(로그 버퍼, 파일 스트림, 소켓) | 스마트 포인터·RAII로 해제 보장 |
+
+## 배운 것
+
+- 소켓 API와 TCP의 동작 방식, RFC 문서를 읽고 프로토콜을 구현하는 경험
+- FTP가 제어 채널과 데이터 채널을 분리하는 이유, NAT 환경에서 PASV가 필요한 이유
+- 그리고 회고하며 알게 된 것: **"동작한다"와 "운영할 수 있다"는 다르다** — 에러 격리, 자원 소유권, 입력 검증의 중요성
